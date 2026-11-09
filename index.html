@@ -340,18 +340,25 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
 @media print{
   :root{padding:0}
   body{background:#fff;color:#000}
-  .tabs,.notice,#tab-setup,#monthView,dialog{display:none !important}
+  .tabs,.notice,#tab-setup,dialog{display:none !important}
   .calbar > :not(.period){display:none !important}
   .calbar{margin-bottom:8px}
   .wrap{max-width:none;padding:0}
   header.top{margin-bottom:10px}
   .month-num{font-size:44px}
-  .ygrid{grid-template-columns:repeat(3,1fr);gap:8px}
-  .mcard{border-color:#bbb;border-radius:8px;padding:8px;gap:6px}
-  .mc-head .mn{font-size:20px}
-  .mday{height:20px;font-size:10.5px}
-  .mlist{font-size:10px}
-  .mlist li{grid-template-columns:58px 1fr}
+  /* 월별 한눈에: 한 달씩 한 장에 */
+  .ygrid{grid-template-columns:1fr;gap:0}
+  .mcard{border:0;padding:0;gap:14px;break-after:page;page-break-after:always}
+  .mcard:last-child{break-after:auto;page-break-after:auto}
+  .mc-head .mn{font-size:34px}
+  .mc-head .my{font-size:16px}
+  .mc-head .md{font-size:15px}
+  .mini{gap:4px}
+  .mini .w{font-size:14px;padding:6px 0}
+  .mday{height:64px;font-size:20px;border:1px solid #ddd;border-radius:6px}
+  .mday.ev::after{height:4px;bottom:8px}
+  .mlist{font-size:14px;gap:6px;padding-top:12px}
+  .mlist li{grid-template-columns:110px 1fr auto}
   @page{size:A4 portrait;margin:10mm}
 }
 .kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px 12px}
@@ -615,6 +622,47 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
 .mhint{font-size:12.5px;color:var(--ink-3);margin:8px 0 0;line-height:1.55}
 .msec{font-size:13px;font-weight:600;margin:14px 0 4px}
 @media print{#logoutBtn{display:none !important}}
+
+/* 학사일정(확정) 인쇄: 위쪽 머리 부분은 빼고(문서 안 제목과 겹침) 한 장에 들어가게 */
+@media print{
+  body:has(#tab-final:not([hidden])) header.top{display:none !important}
+  body:has(#tab-final:not([hidden])) .wrap{padding:0}
+  #tab-final .fsheet{padding:0;border:0}
+  #tab-final .ftitle{margin:0 0 12px}
+  #tab-final .ftitle .fsch{font-size:13px}
+  #tab-final .ftitle .ftt{font-size:22px;margin-top:2px}
+  #tab-final .fsec+.fsec{margin-top:14px}
+  #tab-final .fh{font-size:12.5px;margin:0 0 8px}
+  #tab-final .fsum{gap:8px}
+  #tab-final .fstat{padding:8px 12px;border:1px solid #ccc}
+  #tab-final .fstat .fl{font-size:11.5px}
+  #tab-final .fstat .fv{font-size:20px}
+  #tab-final .fstat.main .fv{font-size:24px}
+  #tab-final .fbar{height:24px}
+  #tab-final .fseg{font-size:11px}
+  #tab-final .fticks{margin:2px 0 8px;font-size:10px}
+  #tab-final .fperiods li{padding:6px 2px;gap:10px}
+  #tab-final .fpn{font-size:13px}
+  #tab-final .fpr{font-size:13px}
+  #tab-final .fpr small{font-size:11.5px}
+  #tab-final .fpd{font-size:12.5px}
+  #tab-final .fkeys{gap:6px}
+  #tab-final .fkey{padding:7px 10px}
+  #tab-final .fkn{font-size:11.5px}
+  #tab-final .fkd{font-size:15px}
+  #tab-final .fks{font-size:12px}
+  @page{size:A4 portrait;margin:12mm}
+}
+@media print{
+  /* 한 달 크게: 그 달 달력만 한 장에 (가로) */
+  #monthView .layout,#monthView{display:block}
+  #monthView aside{display:none !important}
+  #monthView .cal{border-color:#bbb}
+  #monthView .cell{min-height:92px;padding:4px}
+  #monthView .chip{font-size:11px;padding:1px 4px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #monthView .dnum{font-size:13px}
+  #monthView .hname{font-size:10.5px}
+}
 </style>
 </head>
 <body>
@@ -2314,11 +2362,17 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     calView=v==="month"?"month":"year";
     document.querySelector('input[name="calView"][value="'+calView+'"]').checked=true;
     $("#yearView").hidden=calView!=="year"; $("#monthView").hidden=calView!=="month";
+    if(typeof setPrintOrientation==="function") setPrintOrientation();
     renderHeader();
   }
   document.querySelectorAll('input[name="calView"]').forEach(r=>r.addEventListener("change",()=>{ if(r.checked) setCalView(r.value); }));
   $("#wPrint").onclick=()=>window.print();
-  $("#printBtn").onclick=()=>{ if(calView==="month") setCalView("year"); setTimeout(()=>window.print(),50); };
+  // 주별일정은 가로 방향으로 인쇄 (인쇄 버튼이든 Ctrl+P든)
+  const pageStyle=document.createElement("style"); pageStyle.id="pageOrient"; document.head.append(pageStyle);
+  function setPrintOrientation(){ pageStyle.textContent = (tab==="weekly"||(tab==="calendar"&&calView==="month")) ? "@page{size:A4 landscape;margin:10mm}" : ""; }
+  window.addEventListener("beforeprint",setPrintOrientation);
+  if(window.matchMedia){ const mq=window.matchMedia("print"); if(mq.addEventListener) mq.addEventListener("change",e=>{ if(e.matches) setPrintOrientation(); }); }
+  $("#printBtn").onclick=()=>{ setTimeout(()=>window.print(),50); };
 
   // 주별 보기 (월요일 시작)
   const mondayOf=ds=>{const d=parse(ds); d.setDate(d.getDate()-((d.getDay()+6)%7)); return ymd(d);};
@@ -2828,7 +2882,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   let tab=null, tabChosen=false;
   function showTab(t){
     if(!TABS.includes(t)) t="setup";
-    tab=t; closePickers();
+    tab=t; closePickers(); if(typeof setPrintOrientation==="function") setPrintOrientation();
     if(t==="weekly"){ if(!st.wk) { setTimeout(()=>setWeek(weekBase()),0); } else setTimeout(renderWeek,0); }
     if(t==="duty"){ st.dutyVac="summer"; setTimeout(()=>{ renderDuty(); renderHeader(); },0); }
     TABS.forEach(x=>{
