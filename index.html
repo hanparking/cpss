@@ -407,7 +407,7 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
 .fkey{border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:3px;border-left:4px solid var(--c-hak)}
 .fkn{font-size:13.5px;color:var(--ink-2);font-weight:500}
 .fkd{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
-.fks{font-size:13.5px;color:var(--ink-2)}
+.fks{font-size:14px;font-weight:500;color:var(--ink-2);margin-left:2px}
 .fkey.tbd{border-left-color:var(--line);background:var(--paper)}
 .fkey.tbd .fkd{color:var(--ink-3);font-weight:500}
 .fkey.tbd .fks{color:var(--ink-3)}
@@ -1521,8 +1521,8 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     KEY_DATES.forEach(k=>{
       const e=keyEvent(k.k,sy), c=el("div","fkey"+(e?"":" tbd"));
       c.append(el("span","fkn",k.name));
-      if(e){ const d=el("span","fkd",fd(e.start)); c.append(d); c.append(el("span","fks",dw(e.start)+"요일"+(e.tStart?" · "+timeLabel(e):""))); }
-      else { c.append(el("span","fkd","미정")); c.append(el("span","fks","아직 정하지 않음")); }
+      if(e){ const d=el("span","fkd",fd(e.start)); d.append(el("span","fks"," ("+dw(e.start)+")"+(e.tStart?" "+timeLabel(e):""))); c.append(d); }
+      else { c.append(el("span","fkd","미정")); }
       kg.append(c);
     });
     sc2.append(kg);
