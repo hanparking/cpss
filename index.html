@@ -1164,7 +1164,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   const now = new Date();
   const st = {y:now.getFullYear(), m:now.getMonth(), events:[], off:new Set(), canEdit:false, db:null, user:null, editing:null, selected:null, sems:{}, closures:[], src:"all", duty:{}, roster:{rows:{},order:[]}, dutyVac:"summer", dutyPick:"제41조연수", names:{}, adminEvents:[], staffEvents:[], staffRaw:{}, myId:null, canAdd:false};
   // 2027학년도부터 사용 (2026학년도는 표시하지 않음)
-  const MIN_SY=2027, MIN_DATE=MIN_SY+"-03-01";
+  const MIN_SY=2026, MIN_DATE=MIN_SY+"-03-01";
   const clampDate = ds=>ds<MIN_DATE?MIN_DATE:ds;
   if((st.m>=2?st.y:st.y-1)<MIN_SY){st.y=MIN_SY; st.m=2;}
 
