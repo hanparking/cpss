@@ -341,7 +341,7 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
   :root{padding:0}
   body{background:#fff;color:#000}
   .tabs,.notice,#tab-setup,dialog{display:none !important}
-  .calbar > :not(.period){display:none !important}
+  .calbar > :not(.period):not(.pschool){display:none !important}
   .calbar{margin-bottom:8px}
   .wrap{max-width:none;padding:0}
   header.top{margin-bottom:10px}
@@ -663,6 +663,56 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
   #monthView .dnum{font-size:13px}
   #monthView .hname{font-size:10.5px}
 }
+@media print{
+  /* 인쇄할 때 맨 위 머리 부분을 한 줄로: 왼쪽 ‘2027학년도 (2027.3 ~ 2028.2) 월별행사’, 오른쪽 학교 이름(작게) */
+  header.top{display:flex !important;align-items:baseline;gap:12px;margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid #999}
+  header.top .month-title{display:flex;align-items:baseline;gap:8px;min-width:0}
+  header.top .month-num{font-family:var(--sans);font-size:18px;font-weight:700;line-height:1.2;letter-spacing:0}
+  header.top .month-num small{font-size:1em;margin-left:0}
+  header.top .month-meta{display:flex !important;flex-direction:row;align-items:baseline;gap:8px;padding:0}
+  header.top .month-meta .yr,header.top .month-meta .sy{min-height:0;line-height:1.2;font-size:15px;color:#222}
+  header.top .month-meta .yr::before{content:"("} header.top .month-meta .yr::after{content:")"}
+  header.top .month-meta .sy{font-weight:700;margin-left:4px}
+  header.top .month-meta .md{display:none !important}
+  header.top .controls{display:block !important;margin-left:auto;text-align:right}
+  header.top .school{font-family:var(--sans);font-size:12px;font-weight:600;color:#444;padding:0;margin:0;line-height:1.2;text-align:right}
+  .calbar .period b{font-size:15px}
+  .calbar{margin-bottom:6px}
+}
+.printhead{display:none}
+.dtable thead tr.printrow{display:none}
+@media print{
+  header.top{display:none !important}
+  .printhead{display:flex !important;align-items:baseline;justify-content:space-between;gap:12px;padding:0 0 5px;margin:0 0 8px;border-bottom:1px solid #999;container-type:inline-size;font-family:var(--sans);color:#222;white-space:nowrap}
+  .printhead .ph-l{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .printhead .ph-l b{font-weight:700}
+  .printhead .ph-l small{font-size:11px;font-weight:400;color:#555}
+  .printhead .ph-r{font-size:12px;font-weight:600;color:#444;flex:none}
+  .printhead .ph-short{display:none}
+  @container (max-width:430px){ .printhead .ph-full{display:none} .printhead .ph-short{display:inline} }
+  /* 장마다 머리글: 월별 한눈에는 달마다, 방학근무표는 표 머리에서 반복. 확정 화면은 문서 제목이 있어 생략 */
+  body:has(#tab-calendar:not([hidden]) #yearView:not([hidden])) #printHead,
+  body:has(#tab-duty:not([hidden])) #printHead,
+  body:has(#tab-final:not([hidden])) #printHead{display:none !important}
+  .dtable thead tr.printrow{display:table-row}
+  .dtable thead tr.printrow th{position:static;background:#fff;text-align:left;padding:0 0 4px;border:0}
+  .dtable thead tr.printrow .printhead{margin:0;width:100vw;max-width:100vw;container-type:normal}
+  .dtable thead tr.printrow th{max-width:100vw}
+  .dtable thead tr.printrow small{display:inline;font-size:11px;font-weight:400;color:#555}
+  .dtable thead tr.printrow b{font-size:inherit}
+  #tab-duty .dpal{display:none !important}
+}
+.pschool{display:none}
+@media print{
+  /* 월별행사·주별일정: 학교 이름은 달력 바로 위 ‘2027년 3월 · 수업일 22일’ 줄 오른쪽 끝에 */
+  .calbar{display:flex !important;align-items:baseline}
+  .calbar .pschool,.mc-head .pschool{display:inline !important;margin-left:auto;font-size:12px;font-weight:600;color:#444;white-space:nowrap}
+  .mc-head .md{margin-left:auto}
+  .mc-head .md+.pschool{margin-left:14px}
+  body:has(#tab-calendar:not([hidden]) #yearView:not([hidden])) #tab-calendar > .calbar{display:none !important}
+  body:has(#tab-calendar:not([hidden])) .printhead .ph-r,
+  body:has(#tab-weekly:not([hidden])) .printhead .ph-r{display:none !important}
+}
 </style>
 </head>
 <body>
@@ -715,6 +765,7 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
       <label class="sylabel" for="sySel">학년도</label><select class="btn sysel" id="sySel"></select>
     </div>
   </header>
+  <div class="printhead" id="printHead" aria-hidden="true"></div>
 
   <nav class="tabs" role="tablist" aria-label="화면 선택">
     <button class="tab" role="tab" id="tabBtn-setup" aria-controls="tab-setup" data-tab="setup" type="button">학사일정 설정</button>
@@ -814,6 +865,7 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
       <button class="btn primary" id="addBtn" hidden>일정 추가</button></span>
       <span class="spacer"></span>
       <button type="button" class="btn sm" id="printBtn">인쇄</button>
+      <span class="pschool" id="calSchool" aria-hidden="true"></span>
     </div>
     <div id="yearView" class="ygrid"></div>
     <div class="layout" id="monthView" hidden>
@@ -835,7 +887,7 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
   </section>
 
   <section id="tab-weekly" class="tabpanel" role="tabpanel" aria-labelledby="tabBtn-weekly" hidden>
-    <div class="calbar"><span class="period" id="wkPeriod"></span><span class="toolslot" id="slotWk"></span><span class="spacer"></span><button type="button" class="btn sm" id="wPrint">인쇄</button></div>
+    <div class="calbar"><span class="period" id="wkPeriod"></span><span class="toolslot" id="slotWk"></span><span class="spacer"></span><button type="button" class="btn sm" id="wPrint">인쇄</button><span class="pschool" id="wkSchool" aria-hidden="true"></span></div>
     <div id="weekView" class="wview"></div>
   </section>
 
@@ -2449,11 +2501,13 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
       const ms=y+"-"+pad(m+1)+"-01", me=ymd(new Date(y,m+1,0));
       let mn=0, inSem=false; sems.forEach(s=>{ if(isSet(s)&&s.start<=me&&s.end>=ms){inSem=true; mn+=clip(s,ms,me);} });
       const card=document.createElement("article"); card.className="mcard";
+      { const ph=document.createElement("div"); ph.className="printhead"; ph.setAttribute("aria-hidden","true"); ph.innerHTML=printHeadHTML(); card.append(ph); }
       const head=document.createElement("button"); head.type="button"; head.className="mc-head"; head.title=(m+1)+"월 크게 보기";
       const a=document.createElement("span"); a.className="mn"; a.textContent=(m+1)+"월";
       const b=document.createElement("span"); b.className="my"; b.textContent=y;
       const c=document.createElement("span"); c.className="md"; if(inSem) c.innerHTML="수업일 <b>"+mn+"</b>일";
-      head.append(a,b,c);
+      const psc=document.createElement("span"); psc.className="pschool"; psc.setAttribute("aria-hidden","true"); psc.textContent=schoolName()||"";
+      head.append(a,b,c,psc);
       head.onclick=()=>{st.y=y; st.m=m; st.selected=null; setCalView("month"); render();};
       card.append(head);
       // mini calendar
@@ -2635,6 +2689,9 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     const wrap=document.createElement("div"); wrap.className="dwrap";
     const t=document.createElement("table"); t.className="dtable";
     const thead=document.createElement("thead"), hr=document.createElement("tr");
+    { // 인쇄할 때 모든 장 맨 위에 반복되는 머리글 줄
+      const pr=document.createElement("tr"); pr.className="printrow"; const th=document.createElement("th");
+      th.colSpan=1+dates.length+DUTY.length+2; const ph=document.createElement("div"); ph.className="printhead"; ph.innerHTML=printHeadHTML(); th.append(ph); pr.append(th); thead.append(pr); }
     const h0=document.createElement("th"); h0.className="dn"; h0.textContent="이름"; hr.append(h0);
     dates.forEach(ds=>{const d=parse(ds), w=d.getDay(), th=document.createElement("th"); th.className=w===0?"sun":w===6?"sat":offName(ds)?"hol":"";
       th.textContent=(d.getMonth()+1)+"/"+d.getDate(); const sm=document.createElement("small"); sm.textContent=DOW[w]+(offName(ds)&&w!==0&&w!==6?" 휴":""); th.append(sm); if(offName(ds)) th.title=offName(ds); hr.append(th);});
@@ -2898,8 +2955,19 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     b.onkeydown=e=>{ if(e.key==="ArrowRight"||e.key==="ArrowLeft"){e.preventDefault(); const i=TABS.indexOf(b.dataset.tab), o=TABS[(i+(e.key==="ArrowRight"?1:TABS.length-1))%TABS.length]; $("#tabBtn-"+o).focus(); $("#tabBtn-"+o).click();} };
   });
   window.addEventListener("hashchange",()=>{const h=hashTab(); if(h){tabChosen=true; showTab(h);} });
+  // 인쇄용 머리글: 왼쪽 ‘2027학년도 (기간) 탭 이름’, 오른쪽 학교 이름(좁으면 줄임말)
+  function printHeadHTML(){
+    const sy=schoolYear(st.y,st.m), name=schoolName()||"";
+    const short=name.replace(/초등학교$/,"초").replace(/중학교$/,"중").replace(/고등학교$/,"고");
+    const tn={setup:"학사일정 설정",final:"학사일정(확정)",calendar:"월별행사",weekly:"주별일정",duty:"방학근무표"}[tab]||"";
+    const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+    return '<span class="ph-l"><b>'+sy+'학년도</b> <small>('+sy+'.3 ~ '+(sy+1)+'.2)</small> <b>'+tn+'</b></span>'+
+           '<span class="ph-r"><span class="ph-full">'+esc(name)+'</span><span class="ph-short">'+esc(short)+'</span></span>';
+  }
   function renderHeader(){
     if(!tab) return;
+    { const ph=$("#printHead"); if(ph) ph.innerHTML=printHeadHTML(); }
+    { const n=schoolName()||""; ["#calSchool","#wkSchool"].forEach(id=>{ const el=$(id); if(el) el.textContent=n; }); }
     const sy=schoolYear(st.y,st.m);
     if(tab==="setup"){
       $("#mNum").innerHTML=sy+"<small>학년도</small>";
