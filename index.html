@@ -2448,8 +2448,9 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   if(window.matchMedia){ const mq=window.matchMedia("print"); if(mq.addEventListener) mq.addEventListener("change",e=>{ if(e.matches) setPrintOrientation(); }); }
   $("#printBtn").onclick=()=>{ setTimeout(()=>window.print(),50); };
 
-  // 주별 보기 (월요일 시작)
-  const mondayOf=ds=>{const d=parse(ds); d.setDate(d.getDate()-((d.getDay()+6)%7)); return ymd(d);};
+  // 주별 보기 (일요일 시작)
+  // 주의 시작: 일요일 (일~토)
+  const mondayOf=ds=>{const d=parse(ds); d.setDate(d.getDate()-d.getDay()); return ymd(d);};
   function weekBase(){
     const ms=st.y+"-"+pad(st.m+1)+"-01", me=ymd(new Date(st.y,st.m+1,0));
     let b=st.selected||(todayStr>=ms&&todayStr<=me?todayStr:ms);
