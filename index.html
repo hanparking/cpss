@@ -2930,7 +2930,9 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     // 날짜 묶음: 31일 이하는 한 묶음, 길면 달별로 나눔
     let groups=[];
     if(dates.length<=31) groups=[[0,dates.length]];
-    else { let st0=0; for(let i=1;i<=dates.length;i++){ if(i===dates.length||dates[i].slice(0,7)!==dates[i-1].slice(0,7)){ groups.push([st0,i]); st0=i; } } }
+    else { let st0=0; for(let i=1;i<=dates.length;i++){ if(i===dates.length||dates[i].slice(0,7)!==dates[i-1].slice(0,7)){ groups.push([st0,i]); st0=i; } }
+      // 며칠 안 되는 달(7일 미만, 예: 12월 31일 하루)은 옆 달 표에 붙여서 같은 칸 크기로
+      for(let k=0;k<groups.length&&groups.length>1;){ const [a,b]=groups[k]; if(b-a<7){ if(k+1<groups.length){ groups[k+1][0]=a; } else { groups[k-1][1]=b; } groups.splice(k,1); } else k++; } }
     const nCnt=DUTY.length+1;               // 근무 항목별 일 수 + 계
     const total=1+dates.length+nCnt+1;      // 이름 + 날짜 + 집계 + 비고
     // 입력 칸(이름·비고)은 글자로 바꿈
@@ -2940,10 +2942,13 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
         if(tr.classList.contains("printrow")){ tr.firstElementChild.colSpan=keep.length; return; }
         const cells=[...tr.children]; if(cells.length!==total){ if(cells.length===1) cells[0].colSpan=keep.length; return; }
         cells.forEach((c,i)=>{ if(!keep.includes(i)) c.remove(); }); }); return t; };
+    const maxLen=Math.max(...groups.map(([a,b])=>b-a));
     const colg=n=>{ const cg=document.createElement("colgroup"); const c0=document.createElement("col"); c0.style.width="78px"; cg.append(c0); for(let i=1;i<n;i++) cg.append(document.createElement("col")); return cg; };
     groups.forEach(([a,b],gi)=>{
       const keep=[0]; for(let i=a;i<b;i++) keep.push(1+i);
       const t=keepCols(plain(src.cloneNode(true)),keep); t.classList.add("dpt","dpdates"); t.prepend(colg(keep.length));
+      // 날짜 칸 폭을 모든 묶음에서 같게(가장 긴 달 기준): 며칠 안 되는 달도 한 줄을 꽉 채우지 않음
+      const n=b-a; t.style.width="calc(78px + (100% - 78px) * "+n+" / "+maxLen+")";
       const sec=document.createElement("section"); sec.className="dpsec dates"+(gi===groups.length-1?" lastdates":""); sec.append(t); out.append(sec);
     });
     // 집계·비고 한 장
