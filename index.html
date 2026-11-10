@@ -1406,22 +1406,10 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     return null;
   }
   function renderSemWarn(){
-    const box=$("#semWarn"); box.textContent="";
-    if(!st.canEdit) return;
-    const v=semVals();
-    [["s1s","1학기 시작일",1,v.s1End],["s1e","1학기 종료일",-1,v.s1Start],["s2s","2학기 시작일",1,v.s2End],["s2e","2학기 종료일",-1,v.s2Start]].forEach(([id,label,dir,lim])=>{
-      const ds=$("#"+id).value; if(!ds) return;
-      if(id==="s1s" && ds.slice(5)==="03-01") return;   // 학년도·1학기는 3월 1일 시작 (법정)
-      const why=noSchoolReason(ds); if(!why) return;
-      const fix=nearestSchoolDay(ds,dir,lim);
-      const w=document.createElement("div"); w.className="warn";
-      const t=document.createElement("span"); t.textContent=label+" "+fmtShort(ds)+"은(는) "+why+"이라 수업일이 아닙니다.";
-      w.append(t);
-      if(fix){const b=document.createElement("button"); b.type="button"; b.className="btn sm"; b.textContent=fmtShort(fix)+"로 바꾸기";
-        b.onclick=()=>{$("#"+id).value=fix; refreshPickers(); $("#"+id).dispatchEvent(new Event("input"));}; w.append(b);}
-      box.append(w);
-    });
+    // 학기 시작일·종료일은 휴일이어도 괜찮음: 휴일은 수업일수 계산에서 자동으로 빠지므로 안내 문구를 보여 주지 않음
+    const box=$("#semWarn"); if(box) box.textContent="";
   }
+
   function renderHolList(){
     const sy=schoolYear(st.y,st.m), ul=$("#holList"); ul.textContent="";
     $("#holTitle").textContent=sy+"학년도 공휴일·대체공휴일";
