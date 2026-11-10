@@ -707,8 +707,10 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
   /* 월별행사·주별일정: 학교 이름은 달력 바로 위 ‘2027년 3월 · 수업일 22일’ 줄 오른쪽 끝에 */
   .calbar{display:flex !important;align-items:baseline}
   .calbar .pschool,.mc-head .pschool{display:inline !important;margin-left:auto;font-size:12px;font-weight:600;color:#444;white-space:nowrap}
-  .mc-head .md{margin-left:auto}
-  .mc-head .md+.pschool{margin-left:14px}
+  /* 월별 한눈에 인쇄: ‘3월  수업일 22일 ········ 청평초등학교’ (연도 표시는 생략) */
+  .mc-head .my{display:none !important}
+  .mc-head .md{margin-left:14px;font-size:15px}
+  .mc-head .md+.pschool{margin-left:auto}
   body:has(#tab-calendar:not([hidden]) #yearView:not([hidden])) #tab-calendar > .calbar{display:none !important}
   body:has(#tab-calendar:not([hidden])) .printhead .ph-r,
   body:has(#tab-weekly:not([hidden])) .printhead .ph-r{display:none !important}
@@ -2501,7 +2503,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
       const ms=y+"-"+pad(m+1)+"-01", me=ymd(new Date(y,m+1,0));
       let mn=0, inSem=false; sems.forEach(s=>{ if(isSet(s)&&s.start<=me&&s.end>=ms){inSem=true; mn+=clip(s,ms,me);} });
       const card=document.createElement("article"); card.className="mcard";
-      { const ph=document.createElement("div"); ph.className="printhead"; ph.setAttribute("aria-hidden","true"); ph.innerHTML=printHeadHTML(); card.append(ph); }
+      { const ph=document.createElement("div"); ph.className="printhead"; ph.setAttribute("aria-hidden","true"); ph.innerHTML=printHeadHTML("calendar"); card.append(ph); }
       const head=document.createElement("button"); head.type="button"; head.className="mc-head"; head.title=(m+1)+"월 크게 보기";
       const a=document.createElement("span"); a.className="mn"; a.textContent=(m+1)+"월";
       const b=document.createElement("span"); b.className="my"; b.textContent=y;
@@ -2691,7 +2693,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     const thead=document.createElement("thead"), hr=document.createElement("tr");
     { // 인쇄할 때 모든 장 맨 위에 반복되는 머리글 줄
       const pr=document.createElement("tr"); pr.className="printrow"; const th=document.createElement("th");
-      th.colSpan=1+dates.length+DUTY.length+2; const ph=document.createElement("div"); ph.className="printhead"; ph.innerHTML=printHeadHTML(); th.append(ph); pr.append(th); thead.append(pr); }
+      th.colSpan=1+dates.length+DUTY.length+2; const ph=document.createElement("div"); ph.className="printhead"; ph.innerHTML=printHeadHTML("duty"); th.append(ph); pr.append(th); thead.append(pr); }
     const h0=document.createElement("th"); h0.className="dn"; h0.textContent="이름"; hr.append(h0);
     dates.forEach(ds=>{const d=parse(ds), w=d.getDay(), th=document.createElement("th"); th.className=w===0?"sun":w===6?"sat":offName(ds)?"hol":"";
       th.textContent=(d.getMonth()+1)+"/"+d.getDate(); const sm=document.createElement("small"); sm.textContent=DOW[w]+(offName(ds)&&w!==0&&w!==6?" 휴":""); th.append(sm); if(offName(ds)) th.title=offName(ds); hr.append(th);});
@@ -2956,10 +2958,10 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   });
   window.addEventListener("hashchange",()=>{const h=hashTab(); if(h){tabChosen=true; showTab(h);} });
   // 인쇄용 머리글: 왼쪽 ‘2027학년도 (기간) 탭 이름’, 오른쪽 학교 이름(좁으면 줄임말)
-  function printHeadHTML(){
+  function printHeadHTML(forTab){
     const sy=schoolYear(st.y,st.m), name=schoolName()||"";
     const short=name.replace(/초등학교$/,"초").replace(/중학교$/,"중").replace(/고등학교$/,"고");
-    const tn={setup:"학사일정 설정",final:"학사일정(확정)",calendar:"월별행사",weekly:"주별일정",duty:"방학근무표"}[tab]||"";
+    const tn={setup:"학사일정 설정",final:"학사일정(확정)",calendar:"월별행사",weekly:"주별일정",duty:"방학근무표"}[forTab||tab]||"";
     const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
     return '<span class="ph-l"><b>'+sy+'학년도</b> <small>('+sy+'.3 ~ '+(sy+1)+'.2)</small> <b>'+tn+'</b></span>'+
            '<span class="ph-r"><span class="ph-full">'+esc(name)+'</span><span class="ph-short">'+esc(short)+'</span></span>';
