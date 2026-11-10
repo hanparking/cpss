@@ -709,12 +709,27 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
   .calbar .pschool,.mc-head .pschool{display:inline !important;margin-left:auto;font-size:12px;font-weight:600;color:#444;white-space:nowrap}
   /* 월별 한눈에 인쇄: ‘3월  수업일 22일 ········ 청평초등학교’ (연도 표시는 생략) */
   .mc-head .my{display:none !important}
-  .mc-head .md{margin-left:14px;font-size:15px}
+  .mc-head .md{margin-left:12px;font-size:15px;color:#333}
+  .mc-head .md:not(:empty)::before{content:"("} .mc-head .md:not(:empty)::after{content:")"}
+  .mc-head .md b{font-weight:600}
   .mc-head .md+.pschool{margin-left:auto}
   body:has(#tab-calendar:not([hidden]) #yearView:not([hidden])) #tab-calendar > .calbar{display:none !important}
   body:has(#tab-calendar:not([hidden])) .printhead .ph-r,
   body:has(#tab-weekly:not([hidden])) .printhead .ph-r{display:none !important}
 }
+@media print{
+  /* 한 달 크게 인쇄: ‘11월 (수업일 22일)’ */
+  #calPeriod .py{display:none}
+  #calPeriod .pd{font-size:14px;color:#333}
+  #calPeriod .pd::before{content:"(";margin:0} #calPeriod .pd::after{content:")"}
+  #calPeriod{gap:6px}
+}
+/* 이전·다음 버튼이 날짜 글자 길이에 따라 움직이지 않도록 기간 표시 칸 너비를 고정 */
+@media (min-width:761px){
+  #wkPeriod{min-width:400px}
+  #calPeriod:not(:empty){min-width:250px}
+}
+.calnav .btn.icon[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -861,9 +876,9 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
         <label><input type="radio" name="calView" value="month"><span>한 달 크게</span></label>
       </div>
       <span class="period" id="calPeriod"></span>
-      <span class="toolslot" id="slotCal"><span class="calnav" id="calNav"><button class="btn icon" id="prev" aria-label="이전 달">‹</button>
+      <span class="toolslot" id="slotCal"><span class="calnav" id="calNav"><button class="btn icon" id="prevM" aria-label="이전 달" title="이전 달" hidden>«</button><button class="btn icon" id="prev" aria-label="이전" title="이전">‹</button>
       <button class="btn" id="todayBtn">오늘</button>
-      <button class="btn icon" id="next" aria-label="다음 달">›</button></span>
+      <button class="btn icon" id="next" aria-label="다음" title="다음">›</button><button class="btn icon" id="nextM" aria-label="다음 달" title="다음 달" hidden>»</button></span>
       <button class="btn primary" id="addBtn" hidden>일정 추가</button></span>
       <span class="spacer"></span>
       <button type="button" class="btn sm" id="printBtn">인쇄</button>
@@ -2421,6 +2436,11 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   }
   document.querySelectorAll('input[name="calView"]').forEach(r=>r.addEventListener("change",()=>{ if(r.checked) setCalView(r.value); }));
   $("#wPrint").onclick=()=>window.print();
+  // 주별일정: 이전·다음 달의 첫째 주로 이동 (그 달의 1일이 든 주, 목요일 기준)
+  function firstWeekOf(y,m){ const first=ymd(new Date(y,m,1)); let mon=mondayOf(first); if(addDays(mon,3)<first) mon=addDays(mon,7); return mon; }
+  function jumpMonth(d){ if(!st.wk) return; const th=parse(addDays(st.wk,3)); setWeek(firstWeekOf(th.getFullYear(),th.getMonth()+d)); }
+  $("#prevM").onclick=()=>jumpMonth(-1);
+  $("#nextM").onclick=()=>jumpMonth(1);
   // 주별일정은 가로 방향으로 인쇄 (인쇄 버튼이든 Ctrl+P든)
   const pageStyle=document.createElement("style"); pageStyle.id="pageOrient"; document.head.append(pageStyle);
   function setPrintOrientation(){ pageStyle.textContent = (tab==="weekly"||(tab==="calendar"&&calView==="month")) ? "@page{size:A4 landscape;margin:10mm}" : ""; }
@@ -3016,7 +3036,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     if(tab==="calendar"&&calView==="month"){
       const sems=semOf(sy), ms=st.y+"-"+pad(st.m+1)+"-01", me=ymd(new Date(st.y,st.m+1,0));
       let mn=0, inAny=false; sems.forEach(s=>{ if(isSet(s)&&s.start<=me&&s.end>=ms){inAny=true; mn+=clip(s,ms,me);} });
-      $("#calPeriod").innerHTML="<b>"+st.y+"년 "+(st.m+1)+"월</b>"+(inAny?"<span>수업일 "+mn+"일</span>":"");
+      $("#calPeriod").innerHTML="<b><span class=\"py\">"+st.y+"년 </span>"+(st.m+1)+"월</b>"+(inAny?"<span class=\"pd\">수업일 "+mn+"일</span>":"");
     }else $("#calPeriod").textContent="";
     if(tab==="weekly"&&st.wk){
       const a=parse(st.wk), b=parse(addDays(st.wk,6)), th=parse(addDays(st.wk,3));
@@ -3030,6 +3050,11 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     [$("#calNav"),$("#addBtn")].forEach(el=>{ if(el.parentNode!==slot) slot.append(el); });
     $("#prev").disabled=tab==="weekly"?(st.wk&&st.wk<=mondayOf(MIN_DATE)):(st.y===MIN_SY&&st.m===2);
     $("#todayBtn").hidden=todayStr<MIN_DATE;
+    // 주별일정에서는 한 달씩 넘기는 « » 버튼도 보여 줌
+    $("#prevM").hidden=$("#nextM").hidden=tab!=="weekly";
+    if(tab==="weekly"&&st.wk){ const th=parse(addDays(st.wk,3)); $("#prevM").disabled=ymd(new Date(th.getFullYear(),th.getMonth(),1))<=MIN_DATE&&st.wk<=mondayOf(MIN_DATE); }
+    $("#prev").setAttribute("aria-label",tab==="weekly"?"지난주":"이전 달"); $("#prev").title=tab==="weekly"?"지난주":"이전 달";
+    $("#next").setAttribute("aria-label",tab==="weekly"?"다음 주":"다음 달"); $("#next").title=tab==="weekly"?"다음 주":"다음 달";
     $("#addBtn").hidden=!(st.canAdd && (tab==="calendar"||tab==="weekly"));
   }
   if($("#evAddBtn")) $("#evAddBtn").onclick=()=>openForm(null);
@@ -3039,7 +3064,14 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   ["#fStart","#fEnd","#cStart","#cEnd"].forEach(id=>{$(id).min=MIN_DATE;});
   $("#next").onclick=()=>{ if(tab==="weekly"){ setWeek(addDays(st.wk,7)); return; } st.m++; if(st.m>11){st.m=0;st.y++;} render();};
   $("#todayBtn").onclick=()=>{ if(tab==="weekly"){ setWeek(mondayOf(todayStr)); return; } st.y=now.getFullYear(); st.m=now.getMonth(); st.selected=todayStr; render();};
-  $("#addBtn").onclick=()=>openForm(null, st.selected);
+  // 일정 추가: 지금 화면에 보이는 주(주별일정)나 달(월별행사)의 날짜로 시작일·종료일을 채움
+  $("#addBtn").onclick=()=>{
+    let ds;
+    if(tab==="weekly"&&st.wk){ const a=st.wk, b=addDays(st.wk,6); ds=(todayStr>=a&&todayStr<=b)?todayStr:a; }
+    else { const ms=st.y+"-"+pad(st.m+1)+"-01", me=ymd(new Date(st.y,st.m+1,0));
+      ds=(st.selected&&st.selected>=ms&&st.selected<=me)?st.selected:(todayStr>=ms&&todayStr<=me?todayStr:ms); }
+    openForm(null, ds);
+  };
   document.addEventListener("keydown",e=>{
     if(!((tab==="calendar"&&calView==="month")||tab==="weekly")||document.querySelector("dialog[open]")||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.target.classList.contains("tab")) return;
     if(e.key==="ArrowLeft") $("#prev").click();
