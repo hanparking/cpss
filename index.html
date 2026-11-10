@@ -735,6 +735,30 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
 .vclr{border:0;background:none;color:var(--ink-3);font-size:12px;text-decoration:underline;padding:0}
 .vclr:hover{color:var(--sun)}
 .vachint{font-size:12.5px;color:var(--ink-3);margin:10px 2px 0}
+.dprint{display:none}
+@media print{
+  /* 방학근무표: 화면용 표 대신 인쇄용 표(날짜를 달별로 나눔 + 집계·비고 한 장) */
+  body:has(#tab-duty:not([hidden])) #dutyBody{display:none !important}
+  body:has(#tab-duty:not([hidden])) #printHead{display:none !important}
+  .dprint{display:block}
+  .dpsec.dates{break-after:page;page-break-after:always}
+  .dpsec.dates.lastdates{break-after:auto;page-break-after:auto}
+  .dpsec.sum{break-inside:avoid;page-break-inside:avoid;margin-top:14px}
+  .dpt{width:100%;font-size:10px}
+  .dpdates{table-layout:fixed}
+  .dpt th,.dpt td{padding:2px 1px !important;min-width:0 !important;position:static !important}
+  .dpt thead th{font-size:10px}
+  .dpt thead th small{font-size:8.5px}
+  .dpt .dn{min-width:70px !important;max-width:90px;font-size:11px;padding:2px 4px !important;white-space:nowrap}
+  .dpt .dcell{min-height:20px;padding:1px 0;font-size:9px}
+  .dpt .dtag{font-size:8.5px;padding:1px 2px;letter-spacing:-.03em}
+  .dpt tfoot td,.dpt tfoot th{font-size:9px}
+  .dpt tfoot .dtag{font-size:8px}
+  .dpt td.dnote,.dpt th.dnote{min-width:180px !important;max-width:none;font-size:10.5px;white-space:normal}
+  .dpsum th.cnt .dtag{font-size:9px}
+  .dpsum td.cnt{font-size:11px}
+  .dpt thead tr.printrow .printhead{width:auto;max-width:none}
+}
 </style>
 </head>
 <body>
@@ -938,6 +962,7 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
     </div>
     <div class="dpal" id="dPal" role="radiogroup" aria-label="근무 항목"></div>
     <div id="dutyBody"></div>
+    <div id="dutyPrint" class="dprint" aria-hidden="true"></div>
   </section>
 </div>
 
@@ -2457,7 +2482,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   $("#nextM").onclick=()=>jumpMonth(1);
   // 주별일정은 가로 방향으로 인쇄 (인쇄 버튼이든 Ctrl+P든)
   const pageStyle=document.createElement("style"); pageStyle.id="pageOrient"; document.head.append(pageStyle);
-  function setPrintOrientation(){ pageStyle.textContent = (tab==="weekly"||(tab==="calendar"&&calView==="month")) ? "@page{size:A4 landscape;margin:10mm}" : ""; }
+  function setPrintOrientation(){ pageStyle.textContent = (tab==="weekly"||tab==="duty"||(tab==="calendar"&&calView==="month")) ? "@page{size:A4 landscape;margin:10mm}" : ""; }
   window.addEventListener("beforeprint",setPrintOrientation);
   if(window.matchMedia){ const mq=window.matchMedia("print"); if(mq.addEventListener) mq.addEventListener("change",e=>{ if(e.matches) setPrintOrientation(); }); }
   $("#printBtn").onclick=()=>{ setTimeout(()=>window.print(),50); };
@@ -2737,7 +2762,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     if(!ids.length){ const tr=document.createElement("tr"); const td=document.createElement("td"); td.colSpan=dates.length+1+DUTY.length+2; td.className="dempty"; td.style.padding="18px"; td.textContent="아직 입력한 사람이 없습니다."; tr.append(td); tb.append(tr); }
     ids.forEach((uid,idx)=>{
       const r=getRow(uid)||{name:"",data:{}}, row=(r.data&&r.data[k])||{}, me=uid===st.myId, editable=canEditDuty(uid), active=isActive(uid,k);
-      const tr=document.createElement("tr"); if(me) tr.className="me";
+      const tr=document.createElement("tr"); if(me) tr.className="me"; tr.dataset.active=active?"1":"0";
       const nc=document.createElement("th"); nc.className="dn"; nc.scope="row";
       if(me){ const inp=document.createElement("input"); inp.value=r.name||""; inp.placeholder="이름 입력"; inp.maxLength=20; inp.setAttribute("aria-label","내 이름"); inp.dataset.key="name:"+uid;
         inp.onchange=()=>{ dutyRow(uid).name=inp.value.trim(); saveDuty(uid); }; nc.append(inp); const sm=document.createElement("small"); sm.textContent="나"; nc.append(sm); }
@@ -2896,6 +2921,40 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     r.data=Object.assign({},r.data,{[k]:row}); saveDuty(st.myId); renderDuty();
   };
   $("#dPrint").onclick=()=>window.print();
+  // ── 방학근무표 인쇄: 화면 표를 복사해서 한 장에 들어가도록 날짜를 달별로 나누고, 집계·비고는 따로 한 장 ──
+  function buildDutyPrint(){
+    const out=$("#dutyPrint"); if(!out) return; out.textContent="";
+    const src=document.querySelector("#dutyBody .dtable"); if(!src) return;
+    const sy=schoolYear(st.y,st.m), range=vacRange(sy,st.dutyVac); if(!range) return;
+    const dates=[]; for(let d=parse(range[0]); ymd(d)<=range[1]; d.setDate(d.getDate()+1)) dates.push(ymd(d));
+    // 날짜 묶음: 31일 이하는 한 묶음, 길면 달별로 나눔
+    let groups=[];
+    if(dates.length<=31) groups=[[0,dates.length]];
+    else { let st0=0; for(let i=1;i<=dates.length;i++){ if(i===dates.length||dates[i].slice(0,7)!==dates[i-1].slice(0,7)){ groups.push([st0,i]); st0=i; } } }
+    const nCnt=DUTY.length+1;               // 근무 항목별 일 수 + 계
+    const total=1+dates.length+nCnt+1;      // 이름 + 날짜 + 집계 + 비고
+    // 입력 칸(이름·비고)은 글자로 바꿈
+    const plain=t=>{ t.querySelectorAll("[data-key]").forEach(el=>{ const orig=src.querySelector('[data-key="'+el.dataset.key+'"]'); const sp=document.createElement("span"); sp.textContent=orig?orig.value:(el.value||""); el.replaceWith(sp); });
+      t.querySelectorAll(".dctl, tr.me .dn small").forEach(x=>x.remove()); t.querySelectorAll('tbody tr[data-active="0"]').forEach(x=>x.remove()); return t; };
+    const keepCols=(t,keep)=>{ t.querySelectorAll("tr").forEach(tr=>{
+        if(tr.classList.contains("printrow")){ tr.firstElementChild.colSpan=keep.length; return; }
+        const cells=[...tr.children]; if(cells.length!==total){ if(cells.length===1) cells[0].colSpan=keep.length; return; }
+        cells.forEach((c,i)=>{ if(!keep.includes(i)) c.remove(); }); }); return t; };
+    const colg=n=>{ const cg=document.createElement("colgroup"); const c0=document.createElement("col"); c0.style.width="78px"; cg.append(c0); for(let i=1;i<n;i++) cg.append(document.createElement("col")); return cg; };
+    groups.forEach(([a,b],gi)=>{
+      const keep=[0]; for(let i=a;i<b;i++) keep.push(1+i);
+      const t=keepCols(plain(src.cloneNode(true)),keep); t.classList.add("dpt","dpdates"); t.prepend(colg(keep.length));
+      const sec=document.createElement("section"); sec.className="dpsec dates"+(gi===groups.length-1?" lastdates":""); sec.append(t); out.append(sec);
+    });
+    // 집계·비고 한 장
+    const keep=[0]; for(let i=0;i<nCnt+1;i++) keep.push(1+dates.length+i);
+    const t=keepCols(plain(src.cloneNode(true)),keep); t.classList.add("dpt","dpsum");
+    t.querySelectorAll("tfoot tr.agg").forEach(x=>x.remove());
+    t.querySelectorAll("thead tr.printrow").forEach(x=>x.remove());   // 같은 장에 이어질 수 있어 머리글 줄은 생략
+    const sec=document.createElement("section"); sec.className="dpsec sum"; sec.append(t); out.append(sec);
+  }
+  window.addEventListener("beforeprint",()=>{ if(tab==="duty") buildDutyPrint(); });
+  window.addEventListener("afterprint",()=>{ const o=$("#dutyPrint"); if(o) o.textContent=""; });
   function addRosterRow(){
     const name=$("#dAddName").value.trim(); if(!name){ $("#dAddName").focus(); return; }
     const sy=schoolYear(st.y,st.m), ids=dutyIds(dutyKey(sy,st.dutyVac));
