@@ -730,6 +730,11 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
   #calPeriod:not(:empty){min-width:250px}
 }
 .calnav .btn.icon[hidden]{display:none}
+.vacgrp{background:color-mix(in srgb,var(--c-hak) 3%,var(--surface))}
+.vacgrp legend{display:flex;align-items:center;gap:8px}
+.vclr{border:0;background:none;color:var(--ink-3);font-size:12px;text-decoration:underline;padding:0}
+.vclr:hover{color:var(--sun)}
+.vachint{font-size:12.5px;color:var(--ink-3);margin:10px 2px 0}
 </style>
 </head>
 <body>
@@ -809,7 +814,16 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
                 <div class="field"><label for="s2s">시작일</label><input type="hidden" id="s2s"></div>
                 <div class="field"><label for="s2e">종료일</label><input type="hidden" id="s2e"></div>
               </div></fieldset>
+              <fieldset class="semgrp vacgrp"><legend>여름방학 <button type="button" class="vclr" data-v="s">지우기</button></legend><div class="row2">
+                <div class="field"><label for="vss">시작일</label><input type="hidden" id="vss"></div>
+                <div class="field"><label for="vse">종료일</label><input type="hidden" id="vse"></div>
+              </div></fieldset>
+              <fieldset class="semgrp vacgrp"><legend>겨울방학 <button type="button" class="vclr" data-v="w">지우기</button></legend><div class="row2">
+                <div class="field"><label for="vws">시작일</label><input type="hidden" id="vws"></div>
+                <div class="field"><label for="vwe">종료일</label><input type="hidden" id="vwe"></div>
+              </div></fieldset>
             </div>
+            <p class="vachint">방학 기간은 수업일수에서 빠집니다. 방학을 비워 두면 1학기와 2학기 사이, 2학기 뒤~2월 말을 방학으로 봅니다.</p>
             <div class="vacs" id="vacBox" aria-live="polite"></div>
             <div id="semWarn"></div>
             <p class="err" id="sErr"></p>
@@ -1290,13 +1304,24 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   // 수업일수: 학기 기간 중 월~금, 공휴일과 ‘휴업·방학’ 일정이 있는 날은 제외
   const LEGAL_DAYS = 190;
   const okDate = s=>typeof s==="string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
-  function countDays(a,b){
+  // 방학 기간: 직접 입력한 값이 있으면 그 기간, 없으면 학기 사이(여름)·2학기 뒤~2월 말(겨울)
+  function vacOf(sy,src){
+    const v=src||st.sems["sy"+sy]||{}, yE=ymd(new Date(sy+1,2,0)), out={};
+    if(okDate(v.vsStart)&&okDate(v.vsEnd)&&v.vsEnd>=v.vsStart) out.summer=[v.vsStart,v.vsEnd];
+    else if(okDate(v.s1End)&&okDate(v.s2Start)&&v.s2Start>v.s1End){ const a=addDays(v.s1End,1), b=addDays(v.s2Start,-1); if(b>=a) out.summer=[a,b]; }
+    if(okDate(v.vwStart)&&okDate(v.vwEnd)&&v.vwEnd>=v.vwStart) out.winter=[v.vwStart,v.vwEnd];
+    else if(okDate(v.s2End)&&v.s2End<yE) out.winter=[addDays(v.s2End,1),yE];
+    return out;
+  }
+  function inVac(ds,src){ const y=+ds.slice(0,4), m=+ds.slice(5,7), sy=m>=3?y:y-1, o=vacOf(sy,src); return ["summer","winter"].some(k=>o[k]&&ds>=o[k][0]&&ds<=o[k][1]); }
+  function countDays(a,b,src){
     if(!okDate(a)||!okDate(b)||b<a) return 0;
     const offs=st.events.filter(e=>e.cat==="off");
     let n=0;
     for(let d=parse(a); ymd(d)<=b; d.setDate(d.getDate()+1)){
       const ds=ymd(d), w=d.getDay();
       if(w===0||w===6||offName(ds)) continue;
+      if(inVac(ds,src)) continue;
       if(offs.some(e=>e.start<=ds&&e.end>=ds)) continue;
       n++;
     }
@@ -1377,7 +1402,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   let semFormSy=null, semDirty=false, semSaved=false;
   const semDrafts={};   // 학년도별 저장 전 학기 기간 (학년도를 오가도 유지)
   window.addEventListener("beforeunload",e=>{ if(semDirty||Object.keys(semDrafts).length){ e.preventDefault(); e.returnValue=""; } });
-  const SEM_IDS=["#s1s","#s1e","#s2s","#s2e"];
+  const SEM_IDS=["#s1s","#s1e","#s2s","#s2e","#vss","#vse","#vws","#vwe"];
   function loadSemForm(force){
     const sy=schoolYear(st.y,st.m);
     if(!force && semDirty && semFormSy===sy) return;
@@ -1388,6 +1413,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     $("#semFormTitle").textContent=sy+"학년도 학기 기간";
     $("#s1s").value=v.s1Start||(sy+"-03-01"); $("#s1e").value=v.s1End||"";
     $("#s2s").value=v.s2Start||""; $("#s2e").value=v.s2End||"";
+    $("#vss").value=v.vsStart||""; $("#vse").value=v.vsEnd||""; $("#vws").value=v.vwStart||""; $("#vwe").value=v.vwEnd||"";
     SEM_IDS.forEach(id=>{$(id).min=sy+"-03-01"; $(id).max=ymd(new Date(sy+1,2,0)); $(id).disabled=!st.canEdit;});
     $("#sSave").hidden=!st.canEdit; $("#sReset").hidden=!draft;
     $("#sErr").textContent=""; $("#sSave").disabled=false;
@@ -1397,6 +1423,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     const d=parse(ds), w=d.getDay();
     const n=offName(ds); if(n) return n;
     const e=st.events.find(e=>e.cat==="off"&&e.start<=ds&&e.end>=ds); if(e) return e.title;
+    if(inVac(ds)) return "방학";
     if(w===0) return "일요일"; if(w===6) return "토요일";
     return null;
   }
@@ -1430,14 +1457,9 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   function renderVac(){
     const v=semVals(), box=$("#vacBox"); box.textContent="";
     const sy=semFormSy; if(sy==null) return;
-    const items=[];
-    if(okDate(v.s1End)&&okDate(v.s2Start)&&v.s2Start>v.s1End){
-      const a=addDays(v.s1End,1), b=addDays(v.s2Start,-1); if(b>=a) items.push(["여름방학",a,b]);
-    }
-    if(okDate(v.s2End)){
-      const yEnd=ymd(new Date(sy+1,2,0));
-      if(v.s2End<yEnd) items.push(["겨울방학",addDays(v.s2End,1),yEnd]);
-    }
+    const items=[], vo=vacOf(sy,v);
+    if(vo.summer) items.push(["여름방학",vo.summer[0],vo.summer[1]]);
+    if(vo.winter) items.push(["겨울방학",vo.winter[0],vo.winter[1]]);
     items.forEach(([nm,a,b])=>{
       const el=document.createElement("div"); el.className="vac";
       const l=document.createElement("div");
@@ -1448,10 +1470,11 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
       el.append(l,d); box.append(el);
     });
   }
-  function semVals(){return {s1Start:$("#s1s").value,s1End:$("#s1e").value,s2Start:$("#s2s").value,s2End:$("#s2e").value};}
+  function semVals(){return {s1Start:$("#s1s").value,s1End:$("#s1e").value,s2Start:$("#s2s").value,s2End:$("#s2e").value,
+    vsStart:$("#vss").value,vsEnd:$("#vse").value,vwStart:$("#vws").value,vwEnd:$("#vwe").value};}
   function semPreview(){
     const v=semVals();
-    const a=countDays(v.s1Start,v.s1End), b=countDays(v.s2Start,v.s2End);
+    const a=countDays(v.s1Start,v.s1End,v), b=countDays(v.s2Start,v.s2End,v);
     const p=$("#semPreview"); p.classList.remove("ok");
     p.textContent=(v.s1Start||v.s2Start)?"1학기 "+a+"일 + 2학기 "+b+"일 = 총 "+(a+b)+"일"+(semDirty?" (저장 전)":semSaved?" · 저장했습니다":""):"";
     if(semSaved&&!semDirty) p.classList.add("ok");
@@ -1463,7 +1486,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   $("#semForm").addEventListener("submit",async ev=>{
     ev.preventDefault();
     const v=semVals();
-    for(const [s,e,nm] of [[v.s1Start,v.s1End,"1학기"],[v.s2Start,v.s2End,"2학기"]]){
+    for(const [s,e,nm] of [[v.s1Start,v.s1End,"1학기"],[v.s2Start,v.s2End,"2학기"],[v.vsStart,v.vsEnd,"여름방학"],[v.vwStart,v.vwEnd,"겨울방학"]]){
       if(!!s!==!!e){$("#sErr").textContent=nm+"의 시작일과 종료일을 모두 고르세요.";return;}
       if(s&&e<s){$("#sErr").textContent=nm+" 종료일이 시작일보다 빠릅니다.";return;}
     }
@@ -1594,9 +1617,10 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     }else{
       const segs=[];
       if(isSet(s1)) segs.push({name:"1학기",a:s1.start,b:s1.end,sub:"수업 "+n1+"일",kind:"sem"});
-      if(isSet(s1)&&isSet(s2)&&s2.start>s1.end){const a=addDays(s1.end,1), b=addDays(s2.start,-1); if(b>=a) segs.push({name:"여름방학",a,b,sub:dayDiff(a,b)+"일간",kind:"rest"});}
+      const vo=vacOf(sy);
+      if(vo.summer) segs.push({name:"여름방학",a:vo.summer[0],b:vo.summer[1],sub:dayDiff(vo.summer[0],vo.summer[1])+"일간",kind:"rest"});
       if(isSet(s2)) segs.push({name:"2학기",a:s2.start,b:s2.end,sub:"수업 "+n2+"일",kind:"sem"});
-      if(isSet(s2)&&s2.end<yEnd){const a=addDays(s2.end,1); segs.push({name:"겨울방학",a,b:yEnd,sub:dayDiff(a,yEnd)+"일간",kind:"rest"});}
+      if(vo.winter) segs.push({name:"겨울방학",a:vo.winter[0],b:vo.winter[1],sub:dayDiff(vo.winter[0],vo.winter[1])+"일간",kind:"rest"});
       // 한 해 흐름 막대
       const total=dayDiff(yStart,yEnd);
       const bar=el("div","fbar"); bar.setAttribute("role","img");
@@ -1674,7 +1698,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
         const ds=y+"-"+pad(m+1)+"-"+pad(d), w=new Date(y,m,d).getDay();
         if(w===0||w===6) continue; if(hol(ds)){r.hol++; continue;}
         const si=isSet(s1)&&ds>=s1.start&&ds<=s1.end?0:isSet(s2)&&ds>=s2.start&&ds<=s2.end?1:-1;
-        if(si<0) continue;
+        if(si<0||inVac(ds)) continue;
         if(discr(ds)||offs.some(e=>e.start<=ds&&e.end>=ds)){r.close++; continue;}
         r[si===0?"s1":"s2"]++;
       }
@@ -1798,7 +1822,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
         if(w===0||w===6){r.wk++; continue;}
         if(hol(ds)){r.hol++; r.holL.push([ds,hol(ds)]); continue;}
         const si=semIdx(ds);
-        if(si<0){r.vac++; continue;}
+        if(si<0||inVac(ds)){r.vac++; continue;}
         if(discr(ds)||offs.some(e=>e.start<=ds&&e.end>=ds)){r.close++; const oe=offs.find(e=>e.start<=ds&&e.end>=ds); r.closeL.push([ds,discr(ds)||(oe&&oe.title)||"휴업일"]); continue;}
         r[si===0?"s1":"s2"]++;
       }
@@ -2263,6 +2287,8 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     $("#fTS").dataset.prev=ns; refreshPickers();
   });
   makePicker("s1s"); makePicker("s1e","s1s"); makePicker("s2s","s1e"); makePicker("s2e","s2s");
+  makePicker("vss"); makePicker("vse","vss"); makePicker("vws"); makePicker("vwe","vws");
+  document.querySelectorAll(".vclr").forEach(b=>b.onclick=()=>{ const k=b.dataset.v; ["#v"+k+"s","#v"+k+"e"].forEach(id=>{ $(id).value=""; $(id).dispatchEvent(new Event("input")); }); refreshPickers(); });
   makePicker("cStart"); makePicker("cEnd","cStart");
   KEY_DATES.forEach(k=>{
     makePicker("kd-"+k.k);
@@ -2584,12 +2610,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   function tagColor(el,o){ el.style.setProperty("--dc","var("+o.c+")"); el.style.setProperty("--dt",o.dark?"#1d1d1d":"#fff"); }
   const WORKING=new Set(["근무","근무/41조"]);
   const dutyPending={}, dutyTimer={};
-  function vacRange(sy,which){
-    const [s1,s2]=semOf(sy), yE=ymd(new Date(sy+1,2,0));
-    if(which==="summer"){ if(isSet(s1)&&isSet(s2)&&s2.start>s1.end){const a=addDays(s1.end,1), b=addDays(s2.start,-1); return b>=a?[a,b]:null;} return null; }
-    if(isSet(s2)&&s2.end<yE) return [addDays(s2.end,1),yE];
-    return null;
-  }
+  function vacRange(sy,which){ return vacOf(sy)[which]||null; }
   const dutyKey=(sy,which)=>"sy"+sy+"-"+which;
   const canEditDuty=uid=>st.canEdit||(uid===st.myId&&st.canAdd);
   function dutyRow(uid){ if(!st.duty[uid]) st.duty[uid]={name:"",data:{}}; return st.duty[uid]; }
