@@ -3162,8 +3162,18 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   // 업무 순서: 관리자가 정한 순서(work/_order) → 나머지는 등록 순
   function workCmp(sy){ const ord=(st.workOrder||{})["sy"+sy]||[]; const ix=w=>{ const i=ord.indexOf(w.id); return i<0?1e9:i; };
     return (a,b)=>ix(a)-ix(b)||(a.created||a.at||0)-(b.created||b.at||0); }
+  // 표시 순서: 관리자가 정한 순서는 그대로 두고, 새로 만든 업무는 같은 부서의 마지막 업무 바로 뒤에 자동으로 놓음
+  function orderedTasks(sy){
+    const tasks=(st.work||[]).filter(w=>w.sy===sy), ord=(st.workOrder||{})["sy"+sy]||[];
+    const inOrd=tasks.filter(w=>ord.includes(w.id)).sort((a,b)=>ord.indexOf(a.id)-ord.indexOf(b.id));
+    const rest=tasks.filter(w=>!ord.includes(w.id)).sort((a,b)=>(a.created||a.at||0)-(b.created||b.at||0));
+    const out=inOrd.slice();
+    rest.forEach(w=>{ let k=-1; for(let i=out.length-1;i>=0;i--){ if((out[i].dept||"")===(w.dept||"")){ k=i; break; } }
+      if(k<0) out.push(w); else out.splice(k+1,0,w); });
+    return out;
+  }
   async function moveWork(sy,id,dir){
-    const ids=(st.work||[]).filter(w=>w.sy===sy).slice().sort(workCmp(sy)).map(w=>w.id);
+    const ids=orderedTasks(sy).map(w=>w.id);
     const i=ids.indexOf(id), j=i+dir; if(i<0||j<0||j>=ids.length) return;
     [ids[i],ids[j]]=[ids[j],ids[i]];
     const orders=Object.assign({},st.workOrder||{},{["sy"+sy]:ids});
@@ -3207,8 +3217,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     sel.value=depts.includes(keep)?keep:""; st.wkDept=sel.value;
     $("#wkDeptList").innerHTML=depts.map(d=>'<option value="'+d.replace(/"/g,"&quot;")+'"></option>').join("");
     $("#wkMine").checked=st.wkMine;
-    let list=all.filter(w=>(!st.wkDept||w.dept===st.wkDept)&&(!st.wkMine||w.by===st.myId));
-    list.sort(workCmp(sy));
+    let list=orderedTasks(sy).filter(w=>(!st.wkDept||w.dept===st.wkDept)&&(!st.wkMine||w.by===st.myId));
     const canMove=st.role==="admin"&&!st.wkMine&&!st.wkDept;
     body.textContent="";
     if(!list.length){ const p=document.createElement("p"); p.className="fempty panel"; p.textContent=all.length?"조건에 맞는 업무가 없습니다.":"아직 업무가 없습니다. ‘＋ 업무 추가’로 올해 맡은 업무를 등록해 보세요."; body.append(p); return; }
