@@ -821,6 +821,17 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
 #wmEdit[hidden]{display:none}
 .wcell .wtx.ok{color:color-mix(in srgb,var(--c-event) 70%,var(--ink))}
 .wcell .wtx{-webkit-line-clamp:2}
+@media print{
+  /* 업무현황 인쇄: 월 칸 너비를 모두 같게, 업무명·부서 칸은 좁게 */
+  .wtable2{table-layout:fixed;width:100%}
+  .wtable2 thead .wtn,.wtable2 .wtn{width:92px;min-width:0;max-width:none}
+  .wtable2 thead .wtd,.wtable2 .wtd{width:52px;min-width:0;padding:4px 3px}
+  .wtable2 thead .wtp,.wtable2 .wtp{width:32px;min-width:0}
+  .wtable2 thead th{min-width:0 !important}
+  .wtname{padding:3px 4px} .wtname b{font-size:9.5px;word-break:keep-all;overflow-wrap:anywhere}
+  .wcell{overflow:hidden;word-break:keep-all;overflow-wrap:anywhere}
+  .wcell .wtx{-webkit-line-clamp:unset;display:block}
+}
 </style>
 </head>
 <body>
