@@ -841,7 +841,7 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
 @media print{.wmv{display:none !important}}
 .wtable2 .wtnote{min-width:180px;vertical-align:top;padding:4px 6px;text-align:left}
 .wtable2 thead th.wtnote{text-align:left;padding:8px}
-.wtnote textarea{width:100%;min-height:44px;border:1px solid transparent;border-radius:7px;background:transparent;padding:4px 6px;font:inherit;font-size:12.5px;line-height:1.4;resize:vertical}
+.wtnote textarea{width:100%;min-height:30px;border:1px solid transparent;border-radius:7px;background:transparent;padding:4px 6px;font:inherit;font-size:12.5px;line-height:1.4;resize:none;overflow:hidden;display:block}
 .wtnote textarea:hover{border-color:var(--line)} .wtnote textarea:focus{border-color:var(--accent);background:var(--surface);outline:none}
 .wtnotetx{font-size:12.5px;line-height:1.4;padding:4px 6px;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}
 @media print{
@@ -860,6 +860,11 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
 .wtd.has-dept .wdsel{padding:4px 6px}
 .wtd.has-dept .wdsel:hover{border-color:var(--dcol)}
 @media print{.wtd .dpill,.wtd.has-dept .wdsel{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:1px 3px;border-left-width:3px}}
+/* 업무현황: 업무명 칸을 좁게 (화면) */
+.wtable2 .wtn{min-width:120px;max-width:150px;width:130px}
+.wtname{padding:7px 9px}
+.wtname b{font-size:13px;word-break:keep-all;overflow-wrap:anywhere}
+.wmv{padding:0 9px 6px}
 </style>
 </head>
 <body>
@@ -3265,13 +3270,19 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
       { const nc=document.createElement("td"); nc.className="wtnote";
         if(canEditWork(w)){ const ta=document.createElement("textarea"); ta.rows=2; ta.maxLength=500; ta.value=w.note||""; ta.placeholder="비고"; ta.setAttribute("aria-label",w.title+" 비고"); ta.dataset.wkey="note:"+w.id;
           ta.onchange=async()=>{ try{ await saveWorkDoc(w, workData(w,{note:ta.value.trim()})); }catch(_){ ta.value=w.note||""; } };
+          ta.addEventListener("input",()=>autoGrow(ta));
           nc.append(ta); }
         else { const d=document.createElement("div"); d.className="wtnotetx"; d.textContent=w.note||""; nc.append(d); }
         tr.append(nc); }
       tb.append(tr);
     });
     t.append(tb); wrap.append(t); body.append(wrap);
+    body.querySelectorAll(".wtnote textarea").forEach(autoGrow);
   }
+  // 비고 칸: 입력한 내용 길이만큼 칸이 늘어나 한 번에 다 보이게
+  function autoGrow(ta){ ta.style.height="auto"; ta.style.height=(ta.scrollHeight+2)+"px"; }
+  window.addEventListener("beforeprint",()=>{ document.querySelectorAll(".wtnote textarea").forEach(autoGrow); });
+  window.addEventListener("afterprint",()=>{ document.querySelectorAll(".wtnote textarea").forEach(autoGrow); });
   function openWork(w){
     wkEditing=w||null; const can=!w||canEditWork(w);
     $("#wkFormTitle").textContent=!w?"업무 추가":can?"업무 수정":"업무 보기";
