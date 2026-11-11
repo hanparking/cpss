@@ -854,6 +854,12 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
 .wcell .wtx.ok{display:block;width:100%;background:var(--c-event);color:#fff !important;font-weight:600;border-radius:5px;padding:2px 6px;-webkit-line-clamp:unset}
 .wmrow input[type=checkbox]{accent-color:var(--c-event)}
 @media print{.wcell .wtx.ok{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:1px 3px;border-radius:3px}}
+/* 업무현황: 부서 칸만 부서별 색 */
+.wtd.has-dept .wdsel,.wtd .dpill{background:color-mix(in srgb,var(--dcol) 16%,var(--surface));color:color-mix(in srgb,var(--dcol) 85%,var(--ink));font-weight:700;border-left:4px solid var(--dcol);border-radius:6px}
+.wtd .dpill{display:inline-block;padding:4px 8px;font-size:13px}
+.wtd.has-dept .wdsel{padding:4px 6px}
+.wtd.has-dept .wdsel:hover{border-color:var(--dcol)}
+@media print{.wtd .dpill,.wtd.has-dept .wdsel{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:1px 3px;border-left-width:3px}}
 </style>
 </head>
 <body>
@@ -3169,6 +3175,10 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   const canEditWork=w=>!!w&&(st.role==="admin"||(w.by&&w.by===st.myId));
   let wkEditing=null, wmCtx=null;
   const DEPT_BASE=["교무기획","교육과정","과학정보","생활안전","문예체"];
+  // 부서별 색 (그 밖의 부서는 이름에 따라 정해지는 색)
+  const DEPT_COLOR={"교무기획":"#2B55C8","교육과정":"#1F8A5B","과학정보":"#7B4FC9","생활안전":"#D9822B","문예체":"#C2408C"};
+  const EXTRA_COLORS=["#0B8494","#8D6E63","#5E8A12","#C0392B","#455A64"];
+  function deptColor(d){ if(!d) return ""; if(DEPT_COLOR[d]) return DEPT_COLOR[d]; let h=0; for(const ch of d) h=(h*31+ch.charCodeAt(0))>>>0; return EXTRA_COLORS[h%EXTRA_COLORS.length]; }
   function deptOptions(cur){ const used=(st.work||[]).map(w=>w.dept).filter(Boolean); const list=[...new Set(DEPT_BASE.concat(used))]; if(cur&&!list.includes(cur)) list.push(cur); return list; }
   function fillDeptSelect(sel,cur){
     sel.textContent="";
@@ -3224,12 +3234,12 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
           bt.onclick=()=>moveWork(sy,w.id,d); mv.append(bt); });
         c0.append(mv); }
       tr.append(c0);
-      const cd=document.createElement("td"); cd.className="wtd";
+      const cd=document.createElement("td"); cd.className="wtd"+(w.dept?" has-dept":""); if(w.dept) cd.style.setProperty("--dcol",deptColor(w.dept));
       if(canEditWork(w)){ const sel=document.createElement("select"); sel.className="wdsel"; sel.setAttribute("aria-label",w.title+" 부서"); fillDeptSelect(sel,w.dept);
         sel.onchange=async()=>{ let v=sel.value; if(v==="__custom"){ v=askDept(); if(!v){ sel.value=w.dept||""; return; } }
           try{ await saveWorkDoc(w, workData(w,{dept:v})); }catch(_){ sel.value=w.dept||""; } };
         cd.append(sel); }
-      else cd.textContent=w.dept||"";
+      else if(w.dept){ const pill=document.createElement("span"); pill.className="dpill"; pill.textContent=w.dept; cd.append(pill); }
       tr.append(cd);
       let used=0, done=0;
       MONTHS.forEach(m=>{
