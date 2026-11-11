@@ -759,6 +759,57 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
   .dpsum td.cnt{font-size:11px}
   .dpt thead tr.printrow .printhead{width:auto;max-width:none}
 }
+/* ── 업무현황 ── */
+.workbar{flex-wrap:wrap;gap:10px}
+.wkchk{display:inline-flex;align-items:center;gap:5px;font-size:13.5px;color:var(--ink-2)}
+#wkDept{border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:var(--surface);font-size:13.5px}
+.wklegend{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2)}
+.wklegend i{display:inline-block;width:14px;height:12px;border-radius:3px;margin-left:6px}
+.wklegend .lg-done{background:color-mix(in srgb,var(--c-event) 22%,var(--surface));box-shadow:inset 0 0 0 1px var(--c-event)}
+.wklegend .lg-plan{background:color-mix(in srgb,var(--c-hak) 10%,var(--surface));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c-hak) 40%,var(--surface))}
+.wtwrap{overflow:auto;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.wtable2{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+.wtable2 th,.wtable2 td{border-bottom:1px solid var(--line-2);border-right:1px solid var(--line-2);padding:0;vertical-align:top}
+.wtable2 thead th{position:sticky;top:0;z-index:2;background:var(--paper);padding:8px 4px;font-weight:600;text-align:center;min-width:86px}
+.wtable2 thead th.cur{color:var(--accent);box-shadow:inset 0 -3px 0 var(--accent)}
+.wtable2 .wtn{position:sticky;left:0;z-index:1;background:var(--surface);min-width:180px;max-width:240px;text-align:left}
+.wtable2 thead .wtn{z-index:3;background:var(--paper);padding:8px 12px}
+.wtable2 tr.mine .wtn{background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+.wtname{display:flex;flex-direction:column;gap:2px;width:100%;border:0;background:none;text-align:left;padding:8px 12px}
+.wtname b{font-size:14px;font-weight:600;line-height:1.35}
+.wtname small{font-size:12px;color:var(--ink-2)}
+.wtname:hover b{text-decoration:underline}
+.wtable2 tr.wtgroup th{background:var(--paper);text-align:left;padding:6px 12px;font-size:12.5px;color:var(--ink-2);font-weight:700;position:static}
+.wtable2 td.cur{background:color-mix(in srgb,var(--accent) 4%,var(--surface))}
+.wcell{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:52px;border:0;background:none;padding:6px 7px;text-align:left;font-size:12px;line-height:1.35;cursor:pointer}
+.wcell:hover{box-shadow:inset 0 0 0 2px var(--accent)}
+.wcell.plan{background:color-mix(in srgb,var(--c-hak) 8%,var(--surface))}
+.wcell.done{background:color-mix(in srgb,var(--c-event) 15%,var(--surface))}
+.wcell .wck{font-weight:700;color:var(--c-event);font-size:13px}
+.wcell .wtx{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all;overflow-wrap:anywhere}
+.wcell .dempty{align-self:center;margin:auto;color:var(--ink-3)}
+.wtable2 .wtp{text-align:center;vertical-align:middle;min-width:54px;font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink-2)}
+.wmdone{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:600;margin:0 0 12px}
+.wmview{white-space:pre-wrap;line-height:1.6;margin:0 0 12px}
+.field[hidden],.wmdone[hidden],.wmview[hidden]{display:none !important}
+@media print{
+  .workbar{display:none !important}
+  .wtwrap{overflow:visible;border-color:#bbb}
+  .wtable2{font-size:9.5px}
+  .wtable2 thead th{position:static;min-width:0;padding:4px 2px;font-size:10px}
+  .wtable2 .wtn{position:static;min-width:120px;max-width:150px}
+  .wtname{padding:4px 6px} .wtname b{font-size:10.5px} .wtname small{font-size:9px}
+  .wcell{min-height:34px;padding:3px 4px;font-size:9px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .wcell .wtx{-webkit-line-clamp:unset;display:block}
+  .wcell .dempty{display:none}
+  .wtable2 tr{break-inside:avoid}
+}
+.wtable2 .wtd{min-width:110px;vertical-align:top;padding:8px 6px 4px;text-align:left;font-size:13px}
+.wtable2 thead th.wtd{text-align:left;padding:8px 8px}
+.wdsel{width:100%;border:1px solid transparent;border-radius:7px;background:transparent;padding:4px 4px;font:inherit;font-size:13px;color:var(--ink)}
+.wdsel:hover{border-color:var(--line)} .wdsel:focus{border-color:var(--accent);background:var(--surface);outline:none}
+#wkDeptIn{border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:9px 11px;width:100%}
+@media print{ .wdsel{appearance:none;-webkit-appearance:none;border:0;padding:0;font-size:9.5px} .wtable2 .wtd{min-width:60px;font-size:9.5px} }
 </style>
 </head>
 <body>
@@ -819,6 +870,7 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
     <button class="tab" role="tab" id="tabBtn-calendar" aria-controls="tab-calendar" data-tab="calendar" type="button">월별행사</button>
     <button class="tab" role="tab" id="tabBtn-weekly" aria-controls="tab-weekly" data-tab="weekly" type="button">주별일정</button>
     <button class="tab" role="tab" id="tabBtn-duty" aria-controls="tab-duty" data-tab="duty" type="button">방학근무표</button>
+    <button class="tab" role="tab" id="tabBtn-work" aria-controls="tab-work" data-tab="work" type="button" hidden>업무현황</button>
   </nav>
 
   <p class="notice" id="notice" hidden></p>
@@ -946,6 +998,18 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
     <div id="weekView" class="wview"></div>
   </section>
 
+  <section id="tab-work" class="tabpanel" role="tabpanel" aria-labelledby="tabBtn-work" hidden>
+    <div class="calbar workbar">
+      <button type="button" class="btn sm primary" id="wkAdd">＋ 업무 추가</button>
+      <label class="wkchk"><input type="checkbox" id="wkMine"> 내 업무만</label>
+      <select id="wkDept" aria-label="부서별 보기"></select>
+      <span class="wklegend"><i class="lg-done"></i>완료 <i class="lg-plan"></i>계획(내용만)</span>
+      <span class="spacer"></span>
+      <button type="button" class="btn sm" id="wkPrint">인쇄</button>
+    </div>
+    <div id="workBody"></div>
+  </section>
+
   <section id="tab-duty" class="tabpanel" role="tabpanel" aria-labelledby="tabBtn-duty" hidden>
     <div class="calbar dutybar">
       <div class="seg dvseg" role="radiogroup" aria-label="방학 선택">
@@ -1009,6 +1073,35 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
   <div id="helpBody"></div>
   <div class="actions"><button type="button" class="btn primary" id="helpClose">확인</button></div>
 </div></dialog>
+
+<dialog id="dlgWork"><form class="dlg" id="wkForm" method="dialog">
+  <h3 id="wkFormTitle">업무 추가</h3>
+  <p class="sub">교원과 관리자에게만 보입니다.</p>
+  <div class="field"><label for="wkTitle">업무명</label><input id="wkTitle" required maxlength="80" placeholder="예: 학교폭력 실태조사"></div>
+  <div class="field"><label for="wkDeptIn">부서</label><select id="wkDeptIn"></select><datalist id="wkDeptList"></datalist></div>
+  <div class="field"><label for="wkNote">비고 (선택)</label><textarea id="wkNote" maxlength="500" placeholder="관련 공문, 참고 사항 등"></textarea></div>
+  <p class="err" id="wkErr"></p>
+  <div class="actions">
+    <button type="button" class="btn danger" id="wkDel" hidden>삭제</button>
+    <span class="spacer"></span>
+    <button type="button" class="btn" id="wkCancel">취소</button>
+    <button type="submit" class="btn primary" id="wkSave">저장</button>
+  </div>
+</form></dialog>
+
+<dialog id="dlgMonth"><form class="dlg" id="wmForm" method="dialog">
+  <h3 id="wmTitle">3월</h3>
+  <p class="sub" id="wmSub"></p>
+  <label class="wmdone"><input type="checkbox" id="wmDone"> 이 달 업무 완료</label>
+  <div class="field"><label for="wmText">이 달 할 일·진행 내용</label><textarea id="wmText" maxlength="500" placeholder="예: 실태조사 안내 가정통신문 발송, 참여율 확인"></textarea></div>
+  <p class="wmview" id="wmView" hidden></p>
+  <p class="err" id="wmErr"></p>
+  <div class="actions">
+    <span class="spacer"></span>
+    <button type="button" class="btn" id="wmCancel">취소</button>
+    <button type="submit" class="btn primary" id="wmSave">저장</button>
+  </div>
+</form></dialog>
 
 <dialog id="dlgConfirm" class="cfdlg" aria-labelledby="cfMsg"><div class="dlg">
   <p id="cfMsg" class="cfmsg"></p>
@@ -1319,7 +1412,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   const todayStr = ymd(new Date());
 
   const now = new Date();
-  const st = {y:now.getFullYear(), m:now.getMonth(), events:[], off:new Set(), canEdit:false, db:null, user:null, editing:null, selected:null, sems:{}, closures:[], src:"all", duty:{}, roster:{rows:{},order:[]}, dutyVac:"summer", dutyPick:"제41조연수", names:{}, adminEvents:[], staffEvents:[], staffRaw:{}, myId:null, canAdd:false};
+  const st = {y:now.getFullYear(), m:now.getMonth(), events:[], off:new Set(), canEdit:false, db:null, user:null, editing:null, selected:null, sems:{}, closures:[], src:"all", work:[], role:null, roleKnown:false, wkMine:false, wkDept:"", duty:{}, roster:{rows:{},order:[]}, dutyVac:"summer", dutyPick:"제41조연수", names:{}, adminEvents:[], staffEvents:[], staffRaw:{}, myId:null, canAdd:false};
   // 2027학년도부터 사용 (2026학년도는 표시하지 않음)
   const MIN_SY=2026, MIN_DATE=MIN_SY+"-03-01";
   const clampDate = ds=>ds<MIN_DATE?MIN_DATE:ds;
@@ -2074,6 +2167,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     renderYearView();
     renderWeek();
     renderDuty();
+    renderWork();
     renderYearList();
     if(typeof renderClosures==="function") renderClosures();
     renderHeader();
@@ -2483,7 +2577,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   $("#nextM").onclick=()=>jumpMonth(1);
   // 주별일정은 가로 방향으로 인쇄 (인쇄 버튼이든 Ctrl+P든)
   const pageStyle=document.createElement("style"); pageStyle.id="pageOrient"; document.head.append(pageStyle);
-  function setPrintOrientation(){ pageStyle.textContent = (tab==="weekly"||tab==="duty"||(tab==="calendar"&&calView==="month")) ? "@page{size:A4 landscape;margin:10mm}" : ""; }
+  function setPrintOrientation(){ pageStyle.textContent = (tab==="weekly"||tab==="duty"||tab==="work"||(tab==="calendar"&&calView==="month")) ? "@page{size:A4 landscape;margin:10mm}" : ""; }
   window.addEventListener("beforeprint",setPrintOrientation);
   if(window.matchMedia){ const mq=window.matchMedia("print"); if(mq.addEventListener) mq.addEventListener("change",e=>{ if(e.matches) setPrintOrientation(); }); }
   $("#printBtn").onclick=()=>{ setTimeout(()=>window.print(),50); };
@@ -3009,6 +3103,127 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     }catch(err){ const c=err&&err.code; dutyMsg(c==="declined"?"":c==="rate_limited"?"잠시 후 다시 눌러 주세요":"파일을 만들지 못했습니다",c==="declined"?"":"bad"); }
   };
 
+  // ── 업무현황 (교원·관리자만) ──
+  const MONTHS=[3,4,5,6,7,8,9,10,11,12,1,2];
+  function canSeeWork(){ return st.role==="teacher"||st.role==="admin"; }
+  const canEditWork=w=>!!w&&(st.role==="admin"||(w.by&&w.by===st.myId));
+  let wkEditing=null, wmCtx=null;
+  const DEPT_BASE=["교무기획","교육과정","과학정보","생활안전","문예체"];
+  function deptOptions(cur){ const used=(st.work||[]).map(w=>w.dept).filter(Boolean); const list=[...new Set(DEPT_BASE.concat(used))]; if(cur&&!list.includes(cur)) list.push(cur); return list; }
+  function fillDeptSelect(sel,cur){
+    sel.textContent="";
+    const o0=document.createElement("option"); o0.value=""; o0.textContent="부서 선택"; sel.append(o0);
+    deptOptions(cur).forEach(d=>{ const o=document.createElement("option"); o.value=d; o.textContent=d; sel.append(o); });
+    const ox=document.createElement("option"); ox.value="__custom"; ox.textContent="직접 입력…"; sel.append(ox);
+    sel.value=cur||"";
+  }
+  function askDept(){ try{ const v=window.prompt("부서 이름을 입력하세요"); return v?v.trim().slice(0,20):""; }catch(_){ return ""; } }
+  function renderWork(){
+    const body=$("#workBody"); if(!body||tab!=="work") return;
+    const sy=schoolYear(st.y,st.m);
+    const all=(st.work||[]).filter(w=>w.sy===sy);
+    // 부서 고르기
+    const depts=[...new Set(all.map(w=>w.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ko"));
+    const sel=$("#wkDept"), keep=st.wkDept; sel.textContent="";
+    [["","전체 부서"]].concat(depts.map(d=>[d,d])).forEach(([v,t])=>{ const o=document.createElement("option"); o.value=v; o.textContent=t; sel.append(o); });
+    sel.value=depts.includes(keep)?keep:""; st.wkDept=sel.value;
+    $("#wkDeptList").innerHTML=depts.map(d=>'<option value="'+d.replace(/"/g,"&quot;")+'"></option>').join("");
+    $("#wkMine").checked=st.wkMine;
+    let list=all.filter(w=>(!st.wkDept||w.dept===st.wkDept)&&(!st.wkMine||w.by===st.myId));
+    list.sort((a,b)=>(a.created||a.at||0)-(b.created||b.at||0));
+    body.textContent="";
+    if(!list.length){ const p=document.createElement("p"); p.className="fempty panel"; p.textContent=all.length?"조건에 맞는 업무가 없습니다.":"아직 업무가 없습니다. ‘＋ 업무 추가’로 올해 맡은 업무를 등록해 보세요."; body.append(p); return; }
+    const curM=(todayStr>=sy+"-03-01"&&todayStr<=ymd(new Date(sy+1,2,0)))?(+todayStr.slice(5,7)):null;
+    const wrap=document.createElement("div"); wrap.className="wtwrap";
+    const t=document.createElement("table"); t.className="wtable2";
+    const thead=document.createElement("thead"), hr=document.createElement("tr");
+    const h0=document.createElement("th"); h0.className="wtn"; h0.textContent="업무명"; hr.append(h0);
+    const hd=document.createElement("th"); hd.className="wtd"; hd.textContent="부서"; hr.append(hd);
+    MONTHS.forEach(m=>{ const th=document.createElement("th"); th.textContent=m+"월"; if(m===curM) th.className="cur"; hr.append(th); });
+    const hp=document.createElement("th"); hp.className="wtp"; hp.textContent="완료"; hr.append(hp);
+    thead.append(hr); t.append(thead);
+    const tb=document.createElement("tbody");
+    list.forEach(w=>{
+      const tr=document.createElement("tr"); if(w.by===st.myId) tr.className="mine";
+      const c0=document.createElement("th"); c0.className="wtn"; c0.scope="row";
+      const nb=document.createElement("button"); nb.type="button"; nb.className="wtname";
+      const tt=document.createElement("b"); tt.textContent=w.title; nb.append(tt);
+      if(w.note){ const sub=document.createElement("small"); sub.textContent="메모 있음"; nb.append(sub); }
+      nb.onclick=()=>openWork(w); c0.append(nb); tr.append(c0);
+      const cd=document.createElement("td"); cd.className="wtd";
+      if(canEditWork(w)){ const sel=document.createElement("select"); sel.className="wdsel"; sel.setAttribute("aria-label",w.title+" 부서"); fillDeptSelect(sel,w.dept);
+        sel.onchange=async()=>{ let v=sel.value; if(v==="__custom"){ v=askDept(); if(!v){ sel.value=w.dept||""; return; } }
+          try{ await saveWorkDoc(w, workData(w,{dept:v})); }catch(_){ sel.value=w.dept||""; } };
+        cd.append(sel); }
+      else cd.textContent=w.dept||"";
+      tr.append(cd);
+      let used=0, done=0;
+      MONTHS.forEach(m=>{
+        const v=w.months[m]||{}, td=document.createElement("td"); if(m===curM) td.classList.add("cur");
+        const b=document.createElement("button"); b.type="button"; b.className="wcell"+(v.done?" done":v.text?" plan":"");
+        if(v.text||v.done) used++; if(v.done) done++;
+        if(v.done){ const ck=document.createElement("span"); ck.className="wck"; ck.textContent="✓"; b.append(ck); }
+        if(v.text){ const tx=document.createElement("span"); tx.className="wtx"; tx.textContent=v.text; b.append(tx); b.title=m+"월: "+v.text; }
+        if(!v.text&&!v.done){ const e=document.createElement("span"); e.className="dempty"; e.textContent=canEditWork(w)?"+":"·"; b.append(e); }
+        b.setAttribute("aria-label",w.title+" "+m+"월 "+(v.done?"완료 ":"")+(v.text||"내용 없음"));
+        b.onclick=()=>openMonth(w,m); td.append(b); tr.append(td);
+      });
+      const pc=document.createElement("td"); pc.className="wtp"; pc.textContent=used?done+"/"+used:""; tr.append(pc);
+      tb.append(tr);
+    });
+    t.append(tb); wrap.append(t); body.append(wrap);
+  }
+  function openWork(w){
+    wkEditing=w||null; const can=!w||canEditWork(w);
+    $("#wkFormTitle").textContent=!w?"업무 추가":can?"업무 수정":"업무 보기";
+    $("#wkTitle").value=w?w.title:""; fillDeptSelect($("#wkDeptIn"), w?w.dept:(st.wkDept||"")); $("#wkNote").value=w?w.note:"";
+    ["#wkTitle","#wkNote"].forEach(id=>$(id).readOnly=!can); $("#wkDeptIn").disabled=!can;
+    $("#wkSave").hidden=!can; $("#wkDel").hidden=!(w&&can); $("#wkErr").textContent=""; $("#wkCancel").textContent=can?"취소":"닫기";
+    $("#dlgWork").showModal(); if(can) $("#wkTitle").focus();
+  }
+  $("#wkAdd").onclick=()=>openWork(null);
+  $("#wkDeptIn").addEventListener("change",e=>{ if(e.target.value==="__custom"){ const v=askDept(); fillDeptSelect(e.target, v||""); } });
+  $("#wkCancel").onclick=()=>$("#dlgWork").close();
+  $("#wkMine").onchange=e=>{ st.wkMine=e.target.checked; renderWork(); };
+  $("#wkDept").onchange=e=>{ st.wkDept=e.target.value; renderWork(); };
+  $("#wkPrint").onclick=()=>window.print();
+  async function saveWorkDoc(w,data){ const col=st.db.collection("work"); if(w) await col.doc(w.id).set(data); else await col.doc().set(data); }
+  const workData=(w,extra)=>Object.assign({sy:w?w.sy:schoolYear(st.y,st.m), title:w?w.title:"", dept:w?w.dept:"", owner:w?w.owner:"", note:w?w.note:"", by:w?(w.by||st.myId):st.myId, months:w?w.months:{}, created:w?(w.created||w.at||Date.now()):Date.now(), at:Date.now()},extra);
+  $("#wkForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const title=$("#wkTitle").value.trim(); if(!title){ $("#wkErr").textContent="업무명을 입력하세요."; return; }
+    if(!st.db){ $("#wkErr").textContent="지금은 저장할 수 없습니다."; return; }
+    $("#wkSave").disabled=true;
+    try{ await saveWorkDoc(wkEditing, workData(wkEditing,{title,dept:($("#wkDeptIn").value==="__custom"?"":$("#wkDeptIn").value),note:$("#wkNote").value.trim()})); $("#dlgWork").close(); }
+    catch(err){ $("#wkErr").textContent=err&&err.code==="invalid_argument"?"저장할 권한이 없습니다.":"저장하지 못했습니다."; }
+    $("#wkSave").disabled=false;
+  });
+  $("#wkDel").onclick=async()=>{
+    if(!wkEditing) return;
+    if(!(await askConfirm("‘"+wkEditing.title+"’ 업무를 삭제할까요? 월별로 입력한 내용도 모두 지워집니다."))) return;
+    try{ await st.db.collection("work").doc(wkEditing.id).delete(); $("#dlgWork").close(); }catch(_){ $("#wkErr").textContent="삭제하지 못했습니다."; }
+  };
+  function openMonth(w,m){
+    wmCtx={w,m}; const v=w.months[m]||{}, can=canEditWork(w);
+    $("#wmTitle").textContent=m+"월 · "+w.title;
+    $("#wmSub").textContent=w.dept||"";
+    $("#wmDone").checked=!!v.done; $("#wmText").value=v.text||"";
+    $("#wmDone").closest("label").hidden=!can; $("#wmText").closest(".field").hidden=!can;
+    $("#wmView").hidden=can; $("#wmView").textContent=(v.done?"✓ 완료\n":"")+(v.text||"입력된 내용이 없습니다.");
+    $("#wmSave").hidden=!can; $("#wmCancel").textContent=can?"취소":"닫기"; $("#wmErr").textContent="";
+    $("#dlgMonth").showModal(); if(can) $("#wmText").focus();
+  }
+  $("#wmCancel").onclick=()=>$("#dlgMonth").close();
+  $("#wmForm").addEventListener("submit",async e=>{
+    e.preventDefault(); if(!wmCtx) return;
+    const {w,m}=wmCtx, months=JSON.parse(JSON.stringify(w.months||{})), text=$("#wmText").value.trim(), done=$("#wmDone").checked;
+    if(text||done) months[m]={text,done}; else delete months[m];
+    $("#wmSave").disabled=true;
+    try{ await saveWorkDoc(w, workData(w,{months})); $("#dlgMonth").close(); }
+    catch(err){ $("#wmErr").textContent=err&&err.code==="invalid_argument"?"저장할 권한이 없습니다.":"저장하지 못했습니다."; }
+    $("#wmSave").disabled=false;
+  });
+
   // 사용 안내 (역할별)
   function openHelp(){
     const role=st.canEdit?"admin":st.canAdd?"staff":"view";
@@ -3032,13 +3247,15 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   $("#helpClose").onclick=()=>$("#dlgHelp").close();
 
   // tabs (#setup, #calendar)
-  const TABS=["setup","final","calendar","weekly","duty"];
+  const TABS=["setup","final","calendar","weekly","duty","work"];
   let tab=null, tabChosen=false;
   function showTab(t){
     if(!TABS.includes(t)) t="setup";
+    if(t==="work" && st.roleKnown && !canSeeWork()) t="calendar";
     tab=t; closePickers(); if(typeof setPrintOrientation==="function") setPrintOrientation();
     if(t==="weekly"){ if(!st.wk) { setTimeout(()=>setWeek(weekBase()),0); } else setTimeout(renderWeek,0); }
     if(t==="duty"){ st.dutyVac="summer"; setTimeout(()=>{ renderDuty(); renderHeader(); },0); }
+    if(t==="work") setTimeout(renderWork,0);
     TABS.forEach(x=>{
       const on=x===t;
       $("#tab-"+x).hidden=!on;
@@ -3056,7 +3273,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   function printHeadHTML(forTab){
     const sy=schoolYear(st.y,st.m), name=schoolName()||"";
     const short=name.replace(/초등학교$/,"초").replace(/중학교$/,"중").replace(/고등학교$/,"고");
-    const tn={setup:"학사일정 설정",final:"학사일정(확정)",calendar:"월별행사",weekly:"주별일정",duty:"방학근무표"}[forTab||tab]||"";
+    const tn={setup:"학사일정 설정",final:"학사일정(확정)",calendar:"월별행사",weekly:"주별일정",duty:"방학근무표",work:"업무현황"}[forTab||tab]||"";
     const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
     return '<span class="ph-l"><b>'+sy+'학년도</b> <small>('+sy+'.3 ~ '+(sy+1)+'.2)</small> <b>'+tn+'</b></span>'+
            '<span class="ph-r"><span class="ph-full">'+esc(name)+'</span><span class="ph-short">'+esc(short)+'</span></span>';
@@ -3089,6 +3306,11 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
       $("#mSy").textContent="월별행사";
       let tot=0, any=false; semOf(sy).forEach(s=>{ if(isSet(s)){any=true; tot+=countDays(s.start,s.end);} });
       $("#mDays").textContent=any?"총 수업일수 "+tot+"일":"";
+    }else if(tab==="work"){
+      $("#mNum").innerHTML=sy+"<small>학년도</small>";
+      $("#mYear").textContent=sy+".3 ~ "+(sy+1)+".2";
+      $("#mSy").textContent="업무현황";
+      const n=(st.work||[]).filter(w=>w.sy===sy).length; $("#mDays").textContent=n?"업무 "+n+"건":"";
     }else if(tab==="duty"){
       $("#mNum").innerHTML=sy+"<small>학년도</small>";
       $("#mYear").textContent=sy+".3 ~ "+(sy+1)+".2";
@@ -3182,6 +3404,10 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     if(!db){notice("공유 일정을 불러올 수 없습니다. 로그인 상태를 확인하고 링크를 다시 열어 주세요."); st.loaded=true; render(); return;}
     st.db=db;
     try{ st.canEdit = user ? await user.canEdit() : false; }catch(_){ st.canEdit=false; }
+    try{ st.role = user&&user.role ? await user.role() : null; }catch(_){ st.role=null; }
+    st.roleKnown=true;
+    $("#tabBtn-work").hidden=!canSeeWork();
+    if(tab==="work"&&!canSeeWork()) showTab("calendar");
     try{ st.myId = user ? await user.id() : null; }catch(_){ st.myId=null; }
     try{ const me = user ? await user.me() : null; st.myName = me&&me.name ? me.name : ""; }catch(_){ st.myName=""; }
     try{ const w = user ? await user.can("data.write") : null; st.canAdd = st.canEdit || (w!==false && !!st.myId); }catch(_){ st.canAdd=st.canEdit; }
@@ -3211,6 +3437,11 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
         });
       });
       st.staffRaw=raw; st.staffEvents=list; mergeEvents(); render();
+    },()=>{});
+    if(canSeeWork()) db.collection("work").onSnapshot(snap=>{
+      st.work=snap.docs.filter(d=>d.exists).map(d=>{ const v=d.data()||{}; return {id:d.id, sy:Number(v.sy)||0, title:String(v.title||""), dept:String(v.dept||""), owner:String(v.owner||""),
+        note:String(v.note||""), by:v.by||null, at:v.at||0, created:v.created||v.at||0, months:(v.months&&typeof v.months==="object")?JSON.parse(JSON.stringify(v.months)):{}}; });
+      render();
     },()=>{});
     db.collection("duty").onSnapshot(snap=>{
       const m={};
