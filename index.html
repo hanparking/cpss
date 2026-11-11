@@ -849,6 +849,11 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
   .wtnote textarea{border:0;padding:0;font-size:9px;resize:none;overflow:hidden}
   .wtnotetx{font-size:9px;padding:0}
 }
+/* 업무현황: 체크한 줄만 진한 초록 띠로 눈에 띄게 (칸 색은 구분하지 않음) */
+.wcell .wtx{padding:1px 0}
+.wcell .wtx.ok{display:block;width:100%;background:var(--c-event);color:#fff !important;font-weight:600;border-radius:5px;padding:2px 6px;-webkit-line-clamp:unset}
+.wmrow input[type=checkbox]{accent-color:var(--c-event)}
+@media print{.wcell .wtx.ok{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:1px 3px;border-radius:3px}}
 </style>
 </head>
 <body>
@@ -3230,7 +3235,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
       MONTHS.forEach(m=>{
         const items=monthItems(w.months[m]), td=document.createElement("td"); if(m===curM) td.classList.add("cur");
         const allDone=items.length&&items.every(x=>x.done);
-        const b=document.createElement("button"); b.type="button"; b.className="wcell"+(allDone?" done":items.length?" plan":"");
+        const b=document.createElement("button"); b.type="button"; b.className="wcell";
         if(items.length) used++; if(allDone) done++;
         items.forEach(x=>{ const ln=document.createElement("span"); ln.className="wtx"+(x.done?" ok":""); ln.textContent=(x.done?"✓ ":"· ")+(x.text||"(완료)"); b.append(ln); });
         if(items.length) b.title=m+"월\n"+items.map(x=>(x.done?"✓ ":"· ")+x.text).join("\n");
