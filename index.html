@@ -832,6 +832,23 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
   .wcell{overflow:hidden;word-break:keep-all;overflow-wrap:anywhere}
   .wcell .wtx{-webkit-line-clamp:unset;display:block}
 }
+.wtable2 .wtn{position:sticky}
+.wtable2 tbody .wtn{display:table-cell}
+.wmv{display:flex;gap:2px;padding:0 8px 6px 12px}
+.wmv button{width:22px;height:20px;border:1px solid var(--line);border-radius:5px;background:var(--surface);font-size:9px;line-height:1;padding:0;color:var(--ink-2)}
+.wmv button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.wmv button:disabled{opacity:.3;cursor:default}
+@media print{.wmv{display:none !important}}
+.wtable2 .wtnote{min-width:180px;vertical-align:top;padding:4px 6px;text-align:left}
+.wtable2 thead th.wtnote{text-align:left;padding:8px}
+.wtnote textarea{width:100%;min-height:44px;border:1px solid transparent;border-radius:7px;background:transparent;padding:4px 6px;font:inherit;font-size:12.5px;line-height:1.4;resize:vertical}
+.wtnote textarea:hover{border-color:var(--line)} .wtnote textarea:focus{border-color:var(--accent);background:var(--surface);outline:none}
+.wtnotetx{font-size:12.5px;line-height:1.4;padding:4px 6px;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}
+@media print{
+  .wtable2 thead .wtnote,.wtable2 .wtnote{width:110px;min-width:0}
+  .wtnote textarea{border:0;padding:0;font-size:9px;resize:none;overflow:hidden}
+  .wtnotetx{font-size:9px;padding:0}
+}
 </style>
 </head>
 <body>
@@ -1025,7 +1042,6 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
       <button type="button" class="btn sm primary" id="wkAdd">＋ 업무 추가</button>
       <label class="wkchk"><input type="checkbox" id="wkMine"> 내 업무만</label>
       <select id="wkDept" aria-label="부서별 보기"></select>
-      <span class="wklegend"><i class="lg-done"></i>완료 <i class="lg-plan"></i>계획(내용만)</span>
       <span class="spacer"></span>
       <button type="button" class="btn sm" id="wkPrint">인쇄</button>
     </div>
@@ -1437,7 +1453,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   const todayStr = ymd(new Date());
 
   const now = new Date();
-  const st = {y:now.getFullYear(), m:now.getMonth(), events:[], off:new Set(), canEdit:false, db:null, user:null, editing:null, selected:null, sems:{}, closures:[], src:"all", work:[], role:null, roleKnown:false, wkMine:false, wkDept:"", duty:{}, roster:{rows:{},order:[]}, dutyVac:"summer", dutyPick:"제41조연수", names:{}, adminEvents:[], staffEvents:[], staffRaw:{}, myId:null, canAdd:false};
+  const st = {y:now.getFullYear(), m:now.getMonth(), events:[], off:new Set(), canEdit:false, db:null, user:null, editing:null, selected:null, sems:{}, closures:[], src:"all", work:[], workOrder:{}, role:null, roleKnown:false, wkMine:false, wkDept:"", duty:{}, roster:{rows:{},order:[]}, dutyVac:"summer", dutyPick:"제41조연수", names:{}, adminEvents:[], staffEvents:[], staffRaw:{}, myId:null, canAdd:false};
   // 2027학년도부터 사용 (2026학년도는 표시하지 않음)
   const MIN_SY=2026, MIN_DATE=MIN_SY+"-03-01";
   const clampDate = ds=>ds<MIN_DATE?MIN_DATE:ds;
@@ -3132,6 +3148,18 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   const MONTHS=[3,4,5,6,7,8,9,10,11,12,1,2];
   // 한 달에 여러 개 입력: months[m] = {items:[{text,done}]} (예전 {text,done} 형식도 읽음)
   function monthItems(v){ if(!v) return []; if(Array.isArray(v.items)) return v.items.map(x=>({text:String(x.text||""),done:!!x.done})); if(v.text||v.done) return [{text:String(v.text||""),done:!!v.done}]; return []; }
+  // 업무 순서: 관리자가 정한 순서(work/_order) → 나머지는 등록 순
+  function workCmp(sy){ const ord=(st.workOrder||{})["sy"+sy]||[]; const ix=w=>{ const i=ord.indexOf(w.id); return i<0?1e9:i; };
+    return (a,b)=>ix(a)-ix(b)||(a.created||a.at||0)-(b.created||b.at||0); }
+  async function moveWork(sy,id,dir){
+    const ids=(st.work||[]).filter(w=>w.sy===sy).slice().sort(workCmp(sy)).map(w=>w.id);
+    const i=ids.indexOf(id), j=i+dir; if(i<0||j<0||j>=ids.length) return;
+    [ids[i],ids[j]]=[ids[j],ids[i]];
+    const orders=Object.assign({},st.workOrder||{},{["sy"+sy]:ids});
+    st.workOrder=orders; renderWork();
+    setTimeout(()=>{ const b=document.querySelector('[data-wmv="'+id+'"][data-d="'+dir+'"]'); if(b&&!b.disabled) b.focus(); },0);
+    try{ await st.db.collection("work").doc("_order").set({orders,by:st.myId,at:Date.now()}); }catch(_){ alert("순서를 저장하지 못했습니다."); }
+  }
   function canSeeWork(){ return st.role==="teacher"||st.role==="admin"; }
   const canEditWork=w=>!!w&&(st.role==="admin"||(w.by&&w.by===st.myId));
   let wkEditing=null, wmCtx=null;
@@ -3147,6 +3175,14 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   function askDept(){ try{ const v=window.prompt("부서 이름을 입력하세요"); return v?v.trim().slice(0,20):""; }catch(_){ return ""; } }
   function renderWork(){
     const body=$("#workBody"); if(!body||tab!=="work") return;
+    const ae=document.activeElement, keep=(ae&&ae.dataset&&ae.dataset.wkey&&body.contains(ae))?{k:ae.dataset.wkey,v:ae.value,a:ae.selectionStart,b:ae.selectionEnd}:null;
+    const ow=body.querySelector(".wtwrap"), scr=ow?[ow.scrollLeft,ow.scrollTop]:null;
+    renderWorkInner();
+    const nw=body.querySelector(".wtwrap"); if(nw&&scr){ nw.scrollLeft=scr[0]; nw.scrollTop=scr[1]; }
+    if(keep){ const el=body.querySelector('[data-wkey="'+keep.k+'"]'); if(el){ el.value=keep.v; el.focus({preventScroll:true}); try{ el.setSelectionRange(keep.a,keep.b); }catch(_){} } }
+  }
+  function renderWorkInner(){
+    const body=$("#workBody");
     const sy=schoolYear(st.y,st.m);
     const all=(st.work||[]).filter(w=>w.sy===sy);
     // 부서 고르기
@@ -3157,7 +3193,8 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     $("#wkDeptList").innerHTML=depts.map(d=>'<option value="'+d.replace(/"/g,"&quot;")+'"></option>').join("");
     $("#wkMine").checked=st.wkMine;
     let list=all.filter(w=>(!st.wkDept||w.dept===st.wkDept)&&(!st.wkMine||w.by===st.myId));
-    list.sort((a,b)=>(a.created||a.at||0)-(b.created||b.at||0));
+    list.sort(workCmp(sy));
+    const canMove=st.role==="admin"&&!st.wkMine&&!st.wkDept;
     body.textContent="";
     if(!list.length){ const p=document.createElement("p"); p.className="fempty panel"; p.textContent=all.length?"조건에 맞는 업무가 없습니다.":"아직 업무가 없습니다. ‘＋ 업무 추가’로 올해 맡은 업무를 등록해 보세요."; body.append(p); return; }
     const curM=(todayStr>=sy+"-03-01"&&todayStr<=ymd(new Date(sy+1,2,0)))?(+todayStr.slice(5,7)):null;
@@ -3167,7 +3204,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     const h0=document.createElement("th"); h0.className="wtn"; h0.textContent="업무명"; hr.append(h0);
     const hd=document.createElement("th"); hd.className="wtd"; hd.textContent="부서"; hr.append(hd);
     MONTHS.forEach(m=>{ const th=document.createElement("th"); th.textContent=m+"월"; if(m===curM) th.className="cur"; hr.append(th); });
-    const hp=document.createElement("th"); hp.className="wtp"; hp.textContent="완료"; hr.append(hp);
+    const hp=document.createElement("th"); hp.className="wtnote"; hp.textContent="비고"; hr.append(hp);
     thead.append(hr); t.append(thead);
     const tb=document.createElement("tbody");
     list.forEach(w=>{
@@ -3175,8 +3212,13 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
       const c0=document.createElement("th"); c0.className="wtn"; c0.scope="row";
       const nb=document.createElement("button"); nb.type="button"; nb.className="wtname";
       const tt=document.createElement("b"); tt.textContent=w.title; nb.append(tt);
-      if(w.note){ const sub=document.createElement("small"); sub.textContent="메모 있음"; nb.append(sub); }
-      nb.onclick=()=>openWork(w); c0.append(nb); tr.append(c0);
+      nb.onclick=()=>openWork(w); c0.append(nb);
+      if(canMove){ const mv=document.createElement("span"); mv.className="wmv";
+        [[-1,"▲","위로"],[1,"▼","아래로"]].forEach(([d,ch,lb])=>{ const bt=document.createElement("button"); bt.type="button"; bt.textContent=ch; bt.dataset.wmv=w.id; bt.dataset.d=d;
+          bt.setAttribute("aria-label",w.title+" "+lb+" 옮기기"); const k=list.indexOf(w); bt.disabled=(d<0&&k===0)||(d>0&&k===list.length-1);
+          bt.onclick=()=>moveWork(sy,w.id,d); mv.append(bt); });
+        c0.append(mv); }
+      tr.append(c0);
       const cd=document.createElement("td"); cd.className="wtd";
       if(canEditWork(w)){ const sel=document.createElement("select"); sel.className="wdsel"; sel.setAttribute("aria-label",w.title+" 부서"); fillDeptSelect(sel,w.dept);
         sel.onchange=async()=>{ let v=sel.value; if(v==="__custom"){ v=askDept(); if(!v){ sel.value=w.dept||""; return; } }
@@ -3196,7 +3238,12 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
         b.setAttribute("aria-label",w.title+" "+m+"월 "+(items.length?items.map(x=>(x.done?"완료 ":"")+x.text).join(", "):"내용 없음"));
         b.onclick=()=>openMonth(w,m); td.append(b); tr.append(td);
       });
-      const pc=document.createElement("td"); pc.className="wtp"; pc.textContent=used?done+"/"+used:""; tr.append(pc);
+      { const nc=document.createElement("td"); nc.className="wtnote";
+        if(canEditWork(w)){ const ta=document.createElement("textarea"); ta.rows=2; ta.maxLength=500; ta.value=w.note||""; ta.placeholder="비고"; ta.setAttribute("aria-label",w.title+" 비고"); ta.dataset.wkey="note:"+w.id;
+          ta.onchange=async()=>{ try{ await saveWorkDoc(w, workData(w,{note:ta.value.trim()})); }catch(_){ ta.value=w.note||""; } };
+          nc.append(ta); }
+        else { const d=document.createElement("div"); d.className="wtnotetx"; d.textContent=w.note||""; nc.append(d); }
+        tr.append(nc); }
       tb.append(tr);
     });
     t.append(tb); wrap.append(t); body.append(wrap);
@@ -3477,7 +3524,8 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
       st.staffRaw=raw; st.staffEvents=list; mergeEvents(); render();
     },()=>{});
     if(canSeeWork()) db.collection("work").onSnapshot(snap=>{
-      st.work=snap.docs.filter(d=>d.exists).map(d=>{ const v=d.data()||{}; return {id:d.id, sy:Number(v.sy)||0, title:String(v.title||""), dept:String(v.dept||""), owner:String(v.owner||""),
+      const od=snap.docs.find(d=>d.exists&&d.id==="_order"); st.workOrder=od?JSON.parse(JSON.stringify((od.data()||{}).orders||{})):{};
+      st.work=snap.docs.filter(d=>d.exists&&d.id!=="_order").map(d=>{ const v=d.data()||{}; return {id:d.id, sy:Number(v.sy)||0, title:String(v.title||""), dept:String(v.dept||""), owner:String(v.owner||""),
         note:String(v.note||""), by:v.by||null, at:v.at||0, created:v.created||v.at||0, months:(v.months&&typeof v.months==="object")?JSON.parse(JSON.stringify(v.months)):{}}; });
       render();
     },()=>{});
