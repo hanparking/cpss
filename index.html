@@ -810,6 +810,17 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
 .wdsel:hover{border-color:var(--line)} .wdsel:focus{border-color:var(--accent);background:var(--surface);outline:none}
 #wkDeptIn{border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:9px 11px;width:100%}
 @media print{ .wdsel{appearance:none;-webkit-appearance:none;border:0;padding:0;font-size:9.5px} .wtable2 .wtd{min-width:60px;font-size:9.5px} }
+.wmhd{font-size:13px;font-weight:600;color:var(--ink-2);margin:0 0 8px}
+.wmhd small{font-weight:400;color:var(--ink-3);margin-left:6px}
+.wmlist{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.wmrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:start}
+.wmrow input[type=checkbox]{width:18px;height:18px;margin-top:8px}
+.wmrow textarea{border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:7px 10px;font:inherit;font-size:14px;resize:vertical;min-height:40px}
+.wmdel{border:0;background:none;color:var(--ink-3);font-size:18px;padding:4px 6px;margin-top:2px}
+.wmdel:hover{color:var(--sun)}
+#wmEdit[hidden]{display:none}
+.wcell .wtx.ok{color:color-mix(in srgb,var(--c-event) 70%,var(--ink))}
+.wcell .wtx{-webkit-line-clamp:2}
 </style>
 </head>
 <body>
@@ -1092,8 +1103,11 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
 <dialog id="dlgMonth"><form class="dlg" id="wmForm" method="dialog">
   <h3 id="wmTitle">3월</h3>
   <p class="sub" id="wmSub"></p>
-  <label class="wmdone"><input type="checkbox" id="wmDone"> 이 달 업무 완료</label>
-  <div class="field"><label for="wmText">이 달 할 일·진행 내용</label><textarea id="wmText" maxlength="500" placeholder="예: 실태조사 안내 가정통신문 발송, 참여율 확인"></textarea></div>
+  <div id="wmEdit">
+    <p class="wmhd">이 달 할 일·진행 내용 <small>완료한 것은 체크하세요</small></p>
+    <div id="wmList" class="wmlist"></div>
+    <button type="button" class="btn sm" id="wmAddItem">＋ 내용 추가</button>
+  </div>
   <p class="wmview" id="wmView" hidden></p>
   <p class="err" id="wmErr"></p>
   <div class="actions">
@@ -3105,6 +3119,8 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
 
   // ── 업무현황 (교원·관리자만) ──
   const MONTHS=[3,4,5,6,7,8,9,10,11,12,1,2];
+  // 한 달에 여러 개 입력: months[m] = {items:[{text,done}]} (예전 {text,done} 형식도 읽음)
+  function monthItems(v){ if(!v) return []; if(Array.isArray(v.items)) return v.items.map(x=>({text:String(x.text||""),done:!!x.done})); if(v.text||v.done) return [{text:String(v.text||""),done:!!v.done}]; return []; }
   function canSeeWork(){ return st.role==="teacher"||st.role==="admin"; }
   const canEditWork=w=>!!w&&(st.role==="admin"||(w.by&&w.by===st.myId));
   let wkEditing=null, wmCtx=null;
@@ -3159,13 +3175,14 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
       tr.append(cd);
       let used=0, done=0;
       MONTHS.forEach(m=>{
-        const v=w.months[m]||{}, td=document.createElement("td"); if(m===curM) td.classList.add("cur");
-        const b=document.createElement("button"); b.type="button"; b.className="wcell"+(v.done?" done":v.text?" plan":"");
-        if(v.text||v.done) used++; if(v.done) done++;
-        if(v.done){ const ck=document.createElement("span"); ck.className="wck"; ck.textContent="✓"; b.append(ck); }
-        if(v.text){ const tx=document.createElement("span"); tx.className="wtx"; tx.textContent=v.text; b.append(tx); b.title=m+"월: "+v.text; }
-        if(!v.text&&!v.done){ const e=document.createElement("span"); e.className="dempty"; e.textContent=canEditWork(w)?"+":"·"; b.append(e); }
-        b.setAttribute("aria-label",w.title+" "+m+"월 "+(v.done?"완료 ":"")+(v.text||"내용 없음"));
+        const items=monthItems(w.months[m]), td=document.createElement("td"); if(m===curM) td.classList.add("cur");
+        const allDone=items.length&&items.every(x=>x.done);
+        const b=document.createElement("button"); b.type="button"; b.className="wcell"+(allDone?" done":items.length?" plan":"");
+        if(items.length) used++; if(allDone) done++;
+        items.forEach(x=>{ const ln=document.createElement("span"); ln.className="wtx"+(x.done?" ok":""); ln.textContent=(x.done?"✓ ":"· ")+(x.text||"(완료)"); b.append(ln); });
+        if(items.length) b.title=m+"월\n"+items.map(x=>(x.done?"✓ ":"· ")+x.text).join("\n");
+        if(!items.length){ const e=document.createElement("span"); e.className="dempty"; e.textContent=canEditWork(w)?"+":"·"; b.append(e); }
+        b.setAttribute("aria-label",w.title+" "+m+"월 "+(items.length?items.map(x=>(x.done?"완료 ":"")+x.text).join(", "):"내용 없음"));
         b.onclick=()=>openMonth(w,m); td.append(b); tr.append(td);
       });
       const pc=document.createElement("td"); pc.className="wtp"; pc.textContent=used?done+"/"+used:""; tr.append(pc);
@@ -3204,20 +3221,30 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     try{ await st.db.collection("work").doc(wkEditing.id).delete(); $("#dlgWork").close(); }catch(_){ $("#wkErr").textContent="삭제하지 못했습니다."; }
   };
   function openMonth(w,m){
-    wmCtx={w,m}; const v=w.months[m]||{}, can=canEditWork(w);
+    wmCtx={w,m}; const items=monthItems(w.months[m]), can=canEditWork(w);
     $("#wmTitle").textContent=m+"월 · "+w.title;
     $("#wmSub").textContent=w.dept||"";
-    $("#wmDone").checked=!!v.done; $("#wmText").value=v.text||"";
-    $("#wmDone").closest("label").hidden=!can; $("#wmText").closest(".field").hidden=!can;
-    $("#wmView").hidden=can; $("#wmView").textContent=(v.done?"✓ 완료\n":"")+(v.text||"입력된 내용이 없습니다.");
+    $("#wmEdit").hidden=!can;
+    const list=$("#wmList"); list.textContent="";
+    if(can){ (items.length?items:[{text:"",done:false}]).forEach(x=>addMonthRow(x)); }
+    $("#wmView").hidden=can; $("#wmView").textContent=items.length?items.map(x=>(x.done?"✓ ":"· ")+x.text).join("\n"):"입력된 내용이 없습니다.";
     $("#wmSave").hidden=!can; $("#wmCancel").textContent=can?"취소":"닫기"; $("#wmErr").textContent="";
-    $("#dlgMonth").showModal(); if(can) $("#wmText").focus();
+    $("#dlgMonth").showModal(); if(can){ const t=list.querySelector("textarea"); if(t) t.focus(); }
   }
+  function addMonthRow(x){
+    const row=document.createElement("div"); row.className="wmrow";
+    const ck=document.createElement("input"); ck.type="checkbox"; ck.checked=!!x.done; ck.setAttribute("aria-label","완료");
+    const ta=document.createElement("textarea"); ta.rows=2; ta.maxLength=300; ta.value=x.text||""; ta.placeholder="예: 안내 가정통신문 발송";
+    const del=document.createElement("button"); del.type="button"; del.className="wmdel"; del.textContent="×"; del.title="이 내용 지우기"; del.onclick=()=>{ row.remove(); if(!$("#wmList").children.length) addMonthRow({text:"",done:false}); };
+    row.append(ck,ta,del); $("#wmList").append(row); return ta;
+  }
+  $("#wmAddItem").onclick=()=>{ addMonthRow({text:"",done:false}).focus(); };
   $("#wmCancel").onclick=()=>$("#dlgMonth").close();
   $("#wmForm").addEventListener("submit",async e=>{
     e.preventDefault(); if(!wmCtx) return;
-    const {w,m}=wmCtx, months=JSON.parse(JSON.stringify(w.months||{})), text=$("#wmText").value.trim(), done=$("#wmDone").checked;
-    if(text||done) months[m]={text,done}; else delete months[m];
+    const {w,m}=wmCtx, months=JSON.parse(JSON.stringify(w.months||{}));
+    const items=[...$("#wmList").querySelectorAll(".wmrow")].map(r=>({text:r.querySelector("textarea").value.trim(),done:r.querySelector("input").checked})).filter(x=>x.text||x.done);
+    if(items.length) months[m]={items}; else delete months[m];
     $("#wmSave").disabled=true;
     try{ await saveWorkDoc(w, workData(w,{months})); $("#dlgMonth").close(); }
     catch(err){ $("#wmErr").textContent=err&&err.code==="invalid_argument"?"저장할 권한이 없습니다.":"저장하지 못했습니다."; }
