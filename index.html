@@ -898,6 +898,26 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
   .wcell .wtx.ok{padding:2px 4px}
   .wtnote textarea,.wtnotetx{font-size:12px}
 }
+/* 업무현황 첨부 파일 */
+.wfiles{display:flex;flex-direction:column;gap:3px;padding:2px 6px 6px}
+.wfile{display:flex;align-items:center;gap:2px;min-width:0}
+.wfname{border:0;background:none;padding:1px 0;font-size:12px;color:var(--accent);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.wfname:hover{text-decoration:underline}
+.wfdel{border:0;background:none;color:var(--ink-3);font-size:14px;padding:0 3px;flex:none}
+.wfdel:hover{color:var(--sun)}
+.wfadd{align-self:flex-start;border:1px dashed var(--line);background:none;border-radius:6px;padding:2px 7px;font-size:11.5px;color:var(--ink-2);margin-top:2px}
+.wfadd:hover{border-color:var(--accent);color:var(--accent)}
+.atdlg{width:min(480px,calc(100vw - 24px))}
+.atdlg h3{font-family:var(--sans);font-size:17px;margin:0 0 12px}
+.atlist{margin:0 0 18px;padding-left:20px;font-size:14px;line-height:1.65}
+.atlist li+li{margin-top:6px}
+@media print{.wfadd,.wfdel{display:none !important} .wfname{color:#333;font-size:8.5px;padding:0}}
+/* 비고 링크 */
+.wlinks{display:flex;flex-direction:column;gap:2px;padding:0 6px 2px}
+.wlinks[hidden]{display:none}
+.wlinks a,.wtnotetx a{font-size:12px;color:var(--accent);text-decoration:underline;word-break:break-all}
+.wlinks a{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media print{.wlinks{display:none !important} .wtnotetx a{color:#333;text-decoration:none}}
 </style>
 </head>
 <body>
@@ -1192,6 +1212,18 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
     <button type="submit" class="btn primary" id="wmSave">저장</button>
   </div>
 </form></dialog>
+
+<dialog id="dlgAttach" class="cfdlg atdlg" aria-labelledby="atTitle"><div class="dlg">
+  <h3 id="atTitle">⚠️ 파일 첨부 전 꼭 확인해 주세요</h3>
+  <ul class="atlist">
+    <li><b>용량:</b> 파일 하나는 <b>10MB 이하</b>만 올릴 수 있습니다. 학교 전체가 함께 쓰는 저장 공간(1GB)이 한정되어 있습니다.</li>
+    <li><b>사진 첨부 금지:</b> 사진·그림 파일(jpg, png 등)은 올릴 수 없습니다. 필요하면 문서(한글, PDF)에 넣어서 올려 주세요.</li>
+    <li><b>개인정보 금지:</b> 학생·학부모·교직원의 <b>개인정보가 담긴 파일</b>(명단, 연락처, 성적, 상담·건강 기록, 주민번호 등)은 절대 올리지 마세요.</li>
+    <li>업무와 관련된 <b>공문, 계획서, 양식</b> 등만 올려 주세요. 첨부한 파일은 교원과 관리자만 볼 수 있습니다.</li>
+  </ul>
+  <div class="actions"><button type="button" class="btn" id="atCancel">취소</button><button type="button" class="btn primary" id="atOk">확인했습니다. 파일 고르기</button></div>
+</div></dialog>
+<input type="file" id="atFile" hidden accept=".hwp,.hwpx,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.txt,.csv,.zip,.show,.cell">
 
 <dialog id="dlgConfirm" class="cfdlg" aria-labelledby="cfMsg"><div class="dlg">
   <p id="cfMsg" class="cfmsg"></p>
@@ -3303,19 +3335,84 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
       { const nc=document.createElement("td"); nc.className="wtnote";
         if(canEditWork(w)){ const ta=document.createElement("textarea"); ta.rows=2; ta.maxLength=500; ta.value=w.note||""; ta.placeholder="비고"; ta.setAttribute("aria-label",w.title+" 비고"); ta.dataset.wkey="note:"+w.id;
           ta.onchange=async()=>{ try{ await saveWorkDoc(w, workData(w,{note:ta.value.trim()})); }catch(_){ ta.value=w.note||""; } };
-          ta.addEventListener("input",()=>autoGrow(ta));
-          nc.append(ta); }
-        else { const d=document.createElement("div"); d.className="wtnotetx"; d.textContent=w.note||""; nc.append(d); }
+          const lk=document.createElement("div"); lk.className="wlinks"; fillLinks(lk,w.note||"");
+          ta.addEventListener("input",()=>{ autoGrow(ta); fillLinks(lk,ta.value); });
+          nc.append(ta,lk); }
+        else { const d=document.createElement("div"); d.className="wtnotetx"; linkify(d,w.note||""); nc.append(d); }
+        nc.append(fileListEl(w));
         tr.append(nc); }
       tb.append(tr);
     });
     t.append(tb); wrap.append(t); body.append(wrap);
     body.querySelectorAll(".wtnote textarea").forEach(autoGrow);
   }
+  // 비고에 넣은 링크(구글 드라이브 등)를 눌러서 열 수 있게
+  const URL_RE=/https?:\/\/[^\s<>"']+/g;
+  function linkLabel(u){ try{ const h=new URL(u).hostname.replace(/^www\./,"");
+      if(h==="drive.google.com") return "구글 드라이브 열기"; if(h==="docs.google.com") return /spreadsheets/.test(u)?"구글 시트 열기":/presentation/.test(u)?"구글 슬라이드 열기":/forms/.test(u)?"구글 설문 열기":"구글 문서 열기";
+      return h+" 열기"; }catch(_){ return "링크 열기"; } }
+  function mkLink(u,text){ const a=document.createElement("a"); a.href=u; a.target="_blank"; a.rel="noopener noreferrer"; a.textContent=text||u; a.title=u; return a; }
+  function linkify(el,text){ el.textContent=""; let last=0; String(text).replace(URL_RE,(m,i)=>{ el.append(document.createTextNode(text.slice(last,i))); el.append(mkLink(m,linkLabel(m))); last=i+m.length; return m; }); el.append(document.createTextNode(text.slice(last))); }
+  function fillLinks(box,text){ box.textContent=""; const us=[...new Set(String(text).match(URL_RE)||[])]; us.forEach(u=>{ const a=mkLink(u,"🔗 "+linkLabel(u)); box.append(a); }); box.hidden=!us.length; }
   // 비고 칸: 입력한 내용 길이만큼 칸이 늘어나 한 번에 다 보이게
   function autoGrow(ta){ ta.style.height="auto"; ta.style.height=(ta.scrollHeight+2)+"px"; }
   window.addEventListener("beforeprint",()=>{ document.querySelectorAll(".wtnote textarea").forEach(autoGrow); });
   window.addEventListener("afterprint",()=>{ document.querySelectorAll(".wtnote textarea").forEach(autoGrow); });
+  // ── 업무현황 첨부 파일 (Supabase Storage: work-files, 교원·관리자만) ──
+  const FILE_BUCKET="work-files", FILE_MAX=10*1024*1024;
+  const IMG_EXT=/\.(jpe?g|png|gif|bmp|webp|heic|heif|tiff?|svg|raw|cr2|nef)$/i;
+  const fmtSize=n=>n>=1048576?(n/1048576).toFixed(1)+"MB":Math.max(1,Math.round(n/1024))+"KB";
+  function fileListEl(w){
+    const box=document.createElement("div"); box.className="wfiles";
+    (w.files||[]).forEach((f,i)=>{
+      const row=document.createElement("div"); row.className="wfile";
+      const a=document.createElement("button"); a.type="button"; a.className="wfname"; a.textContent="📎 "+f.name; a.title=f.name+" ("+fmtSize(f.size||0)+") 내려받기";
+      a.onclick=()=>downloadFile(f,a); row.append(a);
+      if(canEditWork(w)){ const x=document.createElement("button"); x.type="button"; x.className="wfdel"; x.textContent="×"; x.title="파일 지우기"; x.setAttribute("aria-label",f.name+" 지우기");
+        x.onclick=()=>removeFile(w,i); row.append(x); }
+      box.append(row);
+    });
+    if(canEditWork(w)){ const b=document.createElement("button"); b.type="button"; b.className="wfadd"; b.textContent="📎 파일 첨부"; b.onclick=()=>attachFlow(w,b); box.append(b); }
+    return box;
+  }
+  async function downloadFile(f,el){
+    if(!window.__sb) return;
+    const old=el.textContent; el.textContent="⏳ 여는 중…";
+    try{ const {data,error}=await window.__sb.storage.from(FILE_BUCKET).createSignedUrl(f.path,120,{download:f.name}); if(error) throw error;
+      const a=document.createElement("a"); a.href=data.signedUrl; a.rel="noopener"; document.body.append(a); a.click(); a.remove(); }
+    catch(_){ alert("파일을 열지 못했습니다. 권한이 없거나 파일이 지워졌을 수 있습니다."); }
+    el.textContent=old;
+  }
+  async function removeFile(w,i){
+    const f=(w.files||[])[i]; if(!f) return;
+    if(!(await askConfirm("‘"+f.name+"’ 파일을 지울까요?","지우기"))) return;
+    try{ await window.__sb.storage.from(FILE_BUCKET).remove([f.path]); }catch(_){}
+    const files=(w.files||[]).filter((_,k)=>k!==i);
+    try{ await saveWorkDoc(w, workData(w,{files})); }catch(_){ alert("지우지 못했습니다."); }
+  }
+  // 첨부 전 경고창 → 확인하면 파일 고르기
+  let attachTarget=null;
+  function attachFlow(w,btn){ attachTarget={w,btn}; $("#dlgAttach").showModal(); $("#atOk").focus(); }
+  $("#atCancel").onclick=()=>$("#dlgAttach").close();
+  $("#atOk").onclick=()=>{ $("#dlgAttach").close(); const fi=$("#atFile"); fi.value=""; fi.click(); };
+  $("#atFile").addEventListener("change",async e=>{
+    const file=e.target.files&&e.target.files[0]; if(!file||!attachTarget) return;
+    const {w,btn}=attachTarget;
+    if(file.type.startsWith("image/")||IMG_EXT.test(file.name)){ alert("사진(이미지) 파일은 첨부할 수 없습니다.\n문서 파일(한글, 엑셀, PDF 등)만 올려 주세요."); return; }
+    if(file.size>FILE_MAX){ alert("파일이 너무 큽니다 ("+fmtSize(file.size)+").\n10MB 이하 파일만 첨부할 수 있습니다."); return; }
+    if(!window.__sb){ alert("지금은 파일을 올릴 수 없습니다."); return; }
+    const ext=(file.name.match(/\.([A-Za-z0-9]{1,8})$/)||[,"bin"])[1].toLowerCase();
+    const id=(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));
+    const path=w.sy+"/"+w.id+"/"+id+"."+ext;
+    const old=btn.textContent; btn.disabled=true; btn.textContent="⏳ 올리는 중…";
+    try{
+      const {error}=await window.__sb.storage.from(FILE_BUCKET).upload(path,file,{contentType:file.type||"application/octet-stream",upsert:false});
+      if(error) throw error;
+      const files=(w.files||[]).concat([{path,name:file.name,size:file.size,by:st.myId,at:Date.now()}]);
+      await saveWorkDoc(w, workData(w,{files}));
+    }catch(err){ alert("파일을 올리지 못했습니다."+(err&&/size|large|exceed/i.test(err.message||"")?"\n10MB 이하 파일만 올릴 수 있습니다.":"")); }
+    btn.disabled=false; btn.textContent=old;
+  });
   function openWork(w){
     wkEditing=w||null; const can=!w||canEditWork(w);
     $("#wkFormTitle").textContent=!w?"업무 추가":can?"업무 수정":"업무 보기";
@@ -3331,7 +3428,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   $("#wkDept").onchange=e=>{ st.wkDept=e.target.value; renderWork(); };
   $("#wkPrint").onclick=()=>window.print();
   async function saveWorkDoc(w,data){ const col=st.db.collection("work"); if(w) await col.doc(w.id).set(data); else await col.doc().set(data); }
-  const workData=(w,extra)=>Object.assign({sy:w?w.sy:schoolYear(st.y,st.m), title:w?w.title:"", dept:w?w.dept:"", owner:w?w.owner:"", note:w?w.note:"", by:w?(w.by||st.myId):st.myId, months:w?w.months:{}, created:w?(w.created||w.at||Date.now()):Date.now(), at:Date.now()},extra);
+  const workData=(w,extra)=>Object.assign({sy:w?w.sy:schoolYear(st.y,st.m), title:w?w.title:"", dept:w?w.dept:"", owner:w?w.owner:"", note:w?w.note:"", by:w?(w.by||st.myId):st.myId, months:w?w.months:{}, files:w?(w.files||[]):[], created:w?(w.created||w.at||Date.now()):Date.now(), at:Date.now()},extra);
   $("#wkForm").addEventListener("submit",async e=>{
     e.preventDefault();
     const title=$("#wkTitle").value.trim(); if(!title){ $("#wkErr").textContent="업무명을 입력하세요."; return; }
@@ -3344,7 +3441,9 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
   $("#wkDel").onclick=async()=>{
     if(!wkEditing) return;
     if(!(await askConfirm("‘"+wkEditing.title+"’ 업무를 삭제할까요? 월별로 입력한 내용도 모두 지워집니다."))) return;
-    try{ await st.db.collection("work").doc(wkEditing.id).delete(); $("#dlgWork").close(); }catch(_){ $("#wkErr").textContent="삭제하지 못했습니다."; }
+    try{ const paths=(wkEditing.files||[]).map(f=>f.path).filter(Boolean); await st.db.collection("work").doc(wkEditing.id).delete();
+      if(paths.length&&window.__sb) window.__sb.storage.from(FILE_BUCKET).remove(paths).catch(()=>{}); $("#dlgWork").close(); }
+    catch(_){ $("#wkErr").textContent="삭제하지 못했습니다."; }
   };
   function openMonth(w,m){
     wmCtx={w,m}; const items=monthItems(w.months[m]), can=canEditWork(w);
@@ -3594,7 +3693,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     if(canSeeWork()) db.collection("work").onSnapshot(snap=>{
       const od=snap.docs.find(d=>d.exists&&d.id==="_order"); st.workOrder=od?JSON.parse(JSON.stringify((od.data()||{}).orders||{})):{};
       st.work=snap.docs.filter(d=>d.exists&&d.id!=="_order").map(d=>{ const v=d.data()||{}; return {id:d.id, sy:Number(v.sy)||0, title:String(v.title||""), dept:String(v.dept||""), owner:String(v.owner||""),
-        note:String(v.note||""), by:v.by||null, at:v.at||0, created:v.created||v.at||0, months:(v.months&&typeof v.months==="object")?JSON.parse(JSON.stringify(v.months)):{}}; });
+        note:String(v.note||""), by:v.by||null, at:v.at||0, created:v.created||v.at||0, months:(v.months&&typeof v.months==="object")?JSON.parse(JSON.stringify(v.months)):{}, files:Array.isArray(v.files)?JSON.parse(JSON.stringify(v.files)):[]}; });
       render();
     },()=>{});
     db.collection("duty").onSnapshot(snap=>{
