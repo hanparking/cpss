@@ -918,6 +918,18 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
 .wlinks a,.wtnotetx a{font-size:12px;color:var(--accent);text-decoration:underline;word-break:break-all}
 .wlinks a{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media print{.wlinks{display:none !important} .wtnotetx a{color:#333;text-decoration:none}}
+/* 업무현황: 부서별 버튼 + 부서 화면 바로 입력 */
+.wkchips{display:inline-flex;flex-wrap:wrap;gap:5px}
+.wkchip{--dcol:var(--ink-2);display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600;color:color-mix(in srgb,var(--dcol) 85%,var(--ink))}
+.wkchip small{font-size:11px;font-weight:600;color:var(--ink-3)}
+.wkchip:hover{border-color:var(--dcol)}
+.wkchip.on{background:var(--dcol);border-color:var(--dcol);color:#fff}
+.wkchip.on small{color:rgba(255,255,255,.8)}
+.wkchip:not([style]).on{background:var(--ink);border-color:var(--ink)}
+.wtable2 tr.wquick td{padding:6px 8px;background:color-mix(in srgb,var(--paper) 60%,var(--surface))}
+.wquick input{width:100%;max-width:520px;border:1px dashed color-mix(in srgb,var(--dcol) 60%,var(--line));border-left:4px solid var(--dcol);border-radius:8px;padding:7px 10px;font:inherit;font-size:13.5px;background:var(--surface)}
+.wquick input:focus{border-style:solid;outline:none}
+@media print{.wkchips,.wtable2 tr.wquick{display:none !important}}
 </style>
 </head>
 <body>
@@ -1111,6 +1123,7 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
       <button type="button" class="btn sm primary" id="wkAdd">＋ 업무 추가</button>
       <label class="wkchk"><input type="checkbox" id="wkMine"> 내 업무만</label>
       <select id="wkDept" aria-label="부서별 보기"></select>
+      <span class="wkchips" id="wkChips" aria-label="부서별 보기 버튼"></span>
       <span class="spacer"></span>
       <button type="button" class="btn sm" id="wkPrint">인쇄</button>
     </div>
@@ -3242,9 +3255,11 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
       if(k<0) out.push(w); else out.splice(k+1,0,w); });
     return out;
   }
-  async function moveWork(sy,id,dir){
+  async function moveWork(sy,id,dir,vis){
     const ids=orderedTasks(sy).map(w=>w.id);
-    const i=ids.indexOf(id), j=i+dir; if(i<0||j<0||j>=ids.length) return;
+    // 보이는 목록(부서 화면 등)에서 바로 위·아래 업무와 자리를 바꿈
+    const v=vis||ids, k=v.indexOf(id), nb=v[k+dir]; if(k<0||!nb) return;
+    const i=ids.indexOf(id), j=ids.indexOf(nb); if(i<0||j<0) return;
     [ids[i],ids[j]]=[ids[j],ids[i]];
     const orders=Object.assign({},st.workOrder||{},{["sy"+sy]:ids});
     st.workOrder=orders; renderWork();
@@ -3281,16 +3296,27 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     const sy=schoolYear(st.y,st.m);
     const all=(st.work||[]).filter(w=>w.sy===sy);
     // 부서 고르기
-    const depts=[...new Set(all.map(w=>w.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ko"));
+    const used=[...new Set(all.map(w=>w.dept).filter(Boolean))];
+    const depts=DEPT_BASE.concat(used.filter(d=>!DEPT_BASE.includes(d)).sort((a,b)=>a.localeCompare(b,"ko")));
     const sel=$("#wkDept"), keep=st.wkDept; sel.textContent="";
     [["","전체 부서"]].concat(depts.map(d=>[d,d])).forEach(([v,t])=>{ const o=document.createElement("option"); o.value=v; o.textContent=t; sel.append(o); });
     sel.value=depts.includes(keep)?keep:""; st.wkDept=sel.value;
+    // 부서별 버튼 (누르면 그 부서 화면: 그 부서 업무만 보이고, 바로 입력 가능)
+    { const ch=$("#wkChips"); ch.textContent="";
+      [[""," 전체"]].concat(depts.map(d=>[d,d])).forEach(([v,label])=>{
+        const n=all.filter(w=>!v||w.dept===v).length;
+        const b=document.createElement("button"); b.type="button"; b.className="wkchip"+(st.wkDept===v?" on":"");
+        if(v) b.style.setProperty("--dcol",deptColor(v));
+        b.textContent=(v?v:"전체"); const c=document.createElement("small"); c.textContent=n; b.append(c);
+        b.setAttribute("aria-pressed",st.wkDept===v?"true":"false");
+        b.onclick=()=>{ st.wkDept=v; renderWork(); setTimeout(()=>{ const q=document.querySelector(".wquick input"); if(q&&v) q.focus(); },0); };
+        ch.append(b); }); }
     $("#wkDeptList").innerHTML=depts.map(d=>'<option value="'+d.replace(/"/g,"&quot;")+'"></option>').join("");
     $("#wkMine").checked=st.wkMine;
     let list=orderedTasks(sy).filter(w=>(!st.wkDept||w.dept===st.wkDept)&&(!st.wkMine||w.by===st.myId));
-    const canMove=st.role==="admin"&&!st.wkMine&&!st.wkDept;
+    const canMove=st.role==="admin"&&!st.wkMine;
     body.textContent="";
-    if(!list.length){ const p=document.createElement("p"); p.className="fempty panel"; p.textContent=all.length?"조건에 맞는 업무가 없습니다.":"아직 업무가 없습니다. ‘＋ 업무 추가’로 올해 맡은 업무를 등록해 보세요."; body.append(p); return; }
+    if(!list.length && !st.wkDept){ const p=document.createElement("p"); p.className="fempty panel"; p.textContent=all.length?"조건에 맞는 업무가 없습니다.":"아직 업무가 없습니다. ‘＋ 업무 추가’로 올해 맡은 업무를 등록하거나, 부서 버튼을 눌러 부서별로 입력해 보세요."; body.append(p); return; }
     const curM=(todayStr>=sy+"-03-01"&&todayStr<=ymd(new Date(sy+1,2,0)))?(+todayStr.slice(5,7)):null;
     const wrap=document.createElement("div"); wrap.className="wtwrap";
     const t=document.createElement("table"); t.className="wtable2";
@@ -3310,7 +3336,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
       if(canMove){ const mv=document.createElement("span"); mv.className="wmv";
         [[-1,"▲","위로"],[1,"▼","아래로"]].forEach(([d,ch,lb])=>{ const bt=document.createElement("button"); bt.type="button"; bt.textContent=ch; bt.dataset.wmv=w.id; bt.dataset.d=d;
           bt.setAttribute("aria-label",w.title+" "+lb+" 옮기기"); const k=list.indexOf(w); bt.disabled=(d<0&&k===0)||(d>0&&k===list.length-1);
-          bt.onclick=()=>moveWork(sy,w.id,d); mv.append(bt); });
+          bt.onclick=()=>moveWork(sy,w.id,d,list.map(x=>x.id)); mv.append(bt); });
         c0.append(mv); }
       tr.append(c0);
       const cd=document.createElement("td"); cd.className="wtd"+(w.dept?" has-dept":""); if(w.dept) cd.style.setProperty("--dcol",deptColor(w.dept));
@@ -3343,6 +3369,17 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
         tr.append(nc); }
       tb.append(tr);
     });
+    // 부서 화면: 맨 아래 줄에서 바로 업무 입력 (Enter)
+    if(st.wkDept){
+      const qr=document.createElement("tr"); qr.className="wquick"; const qc=document.createElement("td"); qc.colSpan=MONTHS.length+3;
+      const qi=document.createElement("input"); qi.type="text"; qi.maxLength=80; qi.placeholder="＋ "+st.wkDept+" 업무명을 입력하고 Enter"; qi.setAttribute("aria-label",st.wkDept+" 업무 추가");
+      qi.dataset.wkey="quick:"+st.wkDept; qi.style.setProperty("--dcol",deptColor(st.wkDept));
+      qi.addEventListener("keydown",async e=>{ if(e.key!=="Enter"||e.isComposing) return; e.preventDefault();
+        const title=qi.value.trim(); if(!title||qi.dataset.busy) return; qi.dataset.busy="1"; qi.value="";
+        try{ await saveWorkDoc(null, workData(null,{title,dept:st.wkDept})); }catch(_){ qi.value=title; alert("저장하지 못했습니다."); }
+        delete qi.dataset.busy; });
+      qc.append(qi); qr.append(qc); tb.append(qr);
+    }
     t.append(tb); wrap.append(t); body.append(wrap);
     body.querySelectorAll(".wtnote textarea").forEach(autoGrow);
   }
