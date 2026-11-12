@@ -813,7 +813,11 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
 .wmhd{font-size:13px;font-weight:600;color:var(--ink-2);margin:0 0 8px}
 .wmhd small{font-weight:400;color:var(--ink-3);margin-left:6px}
 .wmlist{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
-.wmrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:start}
+.wmrow{display:grid;grid-template-columns:auto auto 1fr auto;gap:8px;align-items:start;border-radius:10px;transition:background .1s}
+.wmrow.dragging{background:color-mix(in srgb,var(--accent) 10%,var(--surface));box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.wmgrip{cursor:grab;touch-action:none;user-select:none;color:var(--ink-3);font-size:15px;letter-spacing:-3px;padding:9px 4px 0 2px;line-height:1}
+.wmgrip:hover,.wmgrip:focus-visible{color:var(--accent)}
+.wmrow.dragging .wmgrip{cursor:grabbing}
 .wmrow input[type=checkbox]{width:18px;height:18px;margin-top:8px}
 .wmrow textarea{border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:7px 10px;font:inherit;font-size:14px;resize:vertical;min-height:40px}
 .wmdel{border:0;background:none;color:var(--ink-3);font-size:18px;padding:4px 6px;margin-top:2px}
@@ -3498,7 +3502,22 @@ const SUPABASE_ANON_KEY = "sb_publishable_MQhFhjNYfnd3Us8f_mkJBA_g-QRg6l4";
     const ck=document.createElement("input"); ck.type="checkbox"; ck.checked=!!x.done; ck.setAttribute("aria-label","완료");
     const ta=document.createElement("textarea"); ta.rows=2; ta.maxLength=300; ta.value=x.text||""; ta.placeholder="예: 안내 가정통신문 발송";
     const del=document.createElement("button"); del.type="button"; del.className="wmdel"; del.textContent="×"; del.title="이 내용 지우기"; del.onclick=()=>{ row.remove(); if(!$("#wmList").children.length) addMonthRow({text:"",done:false}); };
-    row.append(ck,ta,del); $("#wmList").append(row); return ta;
+    // 끌어서 순서 바꾸기 (⋮⋮ 손잡이를 잡고 위아래로) — 키보드: 손잡이에서 ↑ ↓
+    const grip=document.createElement("span"); grip.className="wmgrip"; grip.textContent="⋮⋮"; grip.tabIndex=0; grip.title="끌어서 순서 바꾸기";
+    grip.setAttribute("role","button"); grip.setAttribute("aria-label","순서 바꾸기 (위아래 화살표)");
+    grip.addEventListener("pointerdown",e=>{
+      e.preventDefault(); const list=$("#wmList"); row.classList.add("dragging");
+      const move=ev=>{ const rows=[...list.querySelectorAll(".wmrow:not(.dragging)")]; let before=null;
+        for(const r of rows){ const b=r.getBoundingClientRect(); if(ev.clientY<b.top+b.height/2){ before=r; break; } }
+        if(before){ if(before!==row.nextSibling) list.insertBefore(row,before); } else if(list.lastElementChild!==row) list.append(row); };
+      // 줄이 옮겨져도 끌기가 끊기지 않도록 창 전체에서 마우스·손가락 움직임을 받음
+      const up=()=>{ row.classList.remove("dragging"); window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up); window.removeEventListener("pointercancel",up); };
+      window.addEventListener("pointermove",move); window.addEventListener("pointerup",up); window.addEventListener("pointercancel",up);
+    });
+    grip.addEventListener("keydown",e=>{ const list=$("#wmList");
+      if(e.key==="ArrowUp"&&row.previousElementSibling){ e.preventDefault(); list.insertBefore(row,row.previousElementSibling); grip.focus(); }
+      if(e.key==="ArrowDown"&&row.nextElementSibling){ e.preventDefault(); list.insertBefore(row.nextElementSibling,row); grip.focus(); } });
+    row.append(grip,ck,ta,del); $("#wmList").append(row); return ta;
   }
   $("#wmAddItem").onclick=()=>{ addMonthRow({text:"",done:false}).focus(); };
   $("#wmCancel").onclick=()=>$("#dlgMonth").close();
