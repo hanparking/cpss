@@ -1401,9 +1401,9 @@ const USE_GOOGLE = true;                                                   // �
   const user={
     id:async()=>me.id,
     me:async()=>({id:me.id,name:me.name||"",role:me.role}),
-    role:async()=>me.role,   // pending / teacher(교원) / staff(교직원) / admin(관리자)
+    role:async()=>me.role,   // pending / teacher(교원) / assistant(실무사, 교원과 같은 권한) / staff(교직원) / admin(관리자)
     canEdit:async()=>me.role==="admin",
-    can:async p=>p==="data.write"?(me.role==="teacher"||me.role==="staff"||me.role==="admin"):null,
+    can:async p=>p==="data.write"?["teacher","assistant","staff","admin"].includes(me.role):null,
     profiles:async ids=>{ const {data}=await sb.from("members").select("id,name").in("id",ids); const o={}; (data||[]).forEach(r=>o[r.id]={name:r.name}); return o; }
   };
   const downloads={ async save({filename,data}){
@@ -1414,7 +1414,7 @@ const USE_GOOGLE = true;                                                   // �
   window.claude={use:async name=>{ await ready; return name==="db"?db:name==="user"?user:name==="downloads"?downloads:null; }};
 
   // ── 교직원 관리 (관리자에게만 보임) ──
-  const ROLE={pending:"승인 대기",teacher:"교원",staff:"교직원",admin:"관리자"};
+  const ROLE={pending:"승인 대기",teacher:"교원",assistant:"실무사",staff:"교직원",admin:"관리자"};
   async function initMemberPanel(){
     const panel=$g("memberPanel"); panel.hidden=false;
     sb.channel("members-all").on("postgres_changes",{event:"*",schema:"public",table:"members"},()=>renderMembers()).subscribe();
@@ -1452,7 +1452,7 @@ const USE_GOOGLE = true;                                                   // �
     const hint=document.createElement("p"); hint.className="mhint"; hint.textContent="여기 등록한 이메일로 처음 로그인하면 승인 없이 바로 들어옵니다. 카카오로 로그인하는 분은 카카오 계정의 이메일을 등록하거나, 로그인 후 위 목록에서 ‘교직원’으로 바꿔 주세요."; body.append(hint);
     const row=document.createElement("div"); row.className="minv";
     const ie=document.createElement("input"); ie.type="email"; ie.placeholder="교직원 이메일"; ie.setAttribute("aria-label","미리 등록할 이메일");
-    const ir=document.createElement("select"); ["teacher","staff","admin"].forEach(k=>{ const o=document.createElement("option"); o.value=k; o.textContent=ROLE[k]; ir.append(o); });
+    const ir=document.createElement("select"); ["teacher","assistant","staff","admin"].forEach(k=>{ const o=document.createElement("option"); o.value=k; o.textContent=ROLE[k]; ir.append(o); });
     const ib=document.createElement("button"); ib.type="button"; ib.className="btn sm primary"; ib.textContent="등록";
     ib.onclick=async()=>{ const email=ie.value.trim().toLowerCase(); if(!email) return; const {error}=await sb.from("invites").upsert({email,role:ir.value}); if(error) alertMsg("등록하지 못했습니다: "+error.message); else { ie.value=""; renderMembers(); } };
     row.append(ie,ir,ib); body.append(row);
@@ -3291,7 +3291,7 @@ const USE_GOOGLE = true;                                                   // �
     setTimeout(()=>{ const b=document.querySelector('[data-wmv="'+id+'"][data-d="'+dir+'"]'); if(b&&!b.disabled) b.focus(); },0);
     try{ await st.db.collection("work").doc("_order").set({orders,by:st.myId,at:Date.now()}); }catch(_){ alert("순서를 저장하지 못했습니다."); }
   }
-  function canSeeWork(){ return st.role==="teacher"||st.role==="admin"; }
+  function canSeeWork(){ return st.role==="teacher"||st.role==="assistant"||st.role==="admin"; }   // 실무사는 교원과 같은 권한
   const canEditWork=w=>!!w&&(st.role==="admin"||(w.by&&w.by===st.myId));
   let wkEditing=null, wmCtx=null;
   const DEPT_BASE=(typeof DEPARTMENTS!=="undefined"&&Array.isArray(DEPARTMENTS)&&DEPARTMENTS.length)?DEPARTMENTS.slice():["교무","연구","생활","정보","체육"];
