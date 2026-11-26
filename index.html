@@ -937,11 +937,8 @@ dialog::backdrop{background:rgba(15,22,40,.45)}
 .wquick input{width:100%;max-width:520px;border:1px dashed color-mix(in srgb,var(--dcol) 60%,var(--line));border-left:4px solid var(--dcol);border-radius:8px;padding:7px 10px;font:inherit;font-size:13.5px;background:var(--surface)}
 .wquick input:focus{border-style:solid;outline:none}
 @media print{.wkchips,.wtable2 tr.wquick{display:none !important}}
-.semsum{margin-top:14px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
-.semsum-t{margin:0 0 4px;font-size:12.5px;color:var(--ink-2)}
-.semsum-f{margin:0;font-size:15px;font-variant-numeric:tabular-nums;line-height:1.5}
-.semsum-f b{font-weight:700}
-.semsum-n{margin:5px 0 0;font-size:11.5px;color:var(--ink-3);line-height:1.5}
+.semf{font-variant-numeric:tabular-nums}
+.semf b{font-weight:700;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -1676,24 +1673,6 @@ const USE_GOOGLE = true;                                                   // �
       if(diff<0) lg.classList.add("short");
       tot.append(bar,lg);
     }
-    // 학년도 전체 날 수 = 수업일 + 휴일 + 휴업일 + 방학
-    if(any){
-      const a0=sy+"-03-01", a1=ymd(new Date(sy+1,2,0)), offs=st.events.filter(e=>e.cat==="off");
-      let cS=0,cH=0,cC=0,cV=0,all=0;
-      for(let d=parse(a0); ymd(d)<=a1; d.setDate(d.getDate()+1)){
-        const ds=ymd(d), w=d.getDay(); all++;
-        const inSem=sems.some(x=>isSet(x)&&x.start<=ds&&x.end>=ds);
-        if(!inSem||inVac(ds)) cV++;
-        else if(w===0||w===6||hol(ds)) cH++;
-        else if(discr(ds)||offs.some(e=>e.start<=ds&&e.end>=ds)) cC++;
-        else cS++;
-      }
-      const f=document.createElement("div"); f.className="semsum";
-      f.innerHTML='<p class="semsum-t">'+sy+'학년도 전체 날 수 ('+fmtRange(a0,a1)+')</p>'+
-        '<p class="semsum-f"><b>수업일 '+cS+'</b> + 휴일 '+cH+' + 휴업일 '+cC+' + 방학 '+cV+' = <b>'+(cS+cH+cC+cV)+'일</b></p>'+
-        '<p class="semsum-n">휴일: 학기 중 토·일요일과 공휴일 · 휴업일: 학교장재량휴업일 · 방학: 방학 기간과 학기 밖의 날'+(cS+cH+cC+cV!==all?' (합계 확인 필요)':'')+'</p>';
-      tot.append(f);
-    }
     const rule=document.createElement("p"); rule.className="rule";
     rule.textContent="토·일요일, 공휴일, 임시공휴일, 학교장재량휴업일은 수업일에서 빠집니다.";
     if(sy<LUNAR_MIN||sy+1>LUNAR_MAX) rule.textContent+=" 이 학년도의 설날·추석·부처님오신날은 자동으로 표시되지 않으니 ‘휴업일 추가’에서 임시공휴일로 등록하세요.";
@@ -1777,8 +1756,25 @@ const USE_GOOGLE = true;                                                   // �
   function semPreview(){
     const v=semVals();
     const a=countDays(v.s1Start,v.s1End,v), b=countDays(v.s2Start,v.s2End,v);
-    const p=$("#semPreview"); p.classList.remove("ok");
-    p.textContent=(v.s1Start||v.s2Start)?"1학기 "+a+"일 + 2학기 "+b+"일 = 총 "+(a+b)+"일"+(semDirty?" (저장 전)":semSaved?" · 저장했습니다":""):"";
+    const p=$("#semPreview"); p.classList.remove("ok"); p.textContent="";
+    if(v.s1Start||v.s2Start){
+      // 학년도 전체 날 수 = 수업일 + 휴일 + 휴업일 + 방학 (각 날은 하나로만 셈)
+      const sy=schoolYear(st.y,st.m), a0=sy+"-03-01", a1=ymd(new Date(sy+1,2,0)), offs=st.events.filter(e=>e.cat==="off");
+      const sem=[[v.s1Start,v.s1End],[v.s2Start,v.s2End]].filter(([x,y])=>okDate(x)&&okDate(y)&&y>=x);
+      let cS=0,cH=0,cC=0,cV=0;
+      for(let d=parse(a0); ymd(d)<=a1; d.setDate(d.getDate()+1)){
+        const ds=ymd(d), w=d.getDay();
+        if(!sem.some(([x,y])=>x<=ds&&y>=ds)||inVac(ds,v)) cV++;
+        else if(w===0||w===6||hol(ds)) cH++;
+        else if(discr(ds)||offs.some(e=>e.start<=ds&&e.end>=ds)) cC++;
+        else cS++;
+      }
+      const f=document.createElement("span"); f.className="semf";
+      f.innerHTML="<b>수업일 "+cS+"</b> + 휴일 "+cH+" + 휴업일 "+cC+" + 방학 "+cV+" = <b>"+(cS+cH+cC+cV)+"일</b>";
+      f.title="1학기 "+a+"일 + 2학기 "+b+"일 = 총 수업일 "+(a+b)+"일\n휴일: 학기 중 토·일요일·공휴일 / 휴업일: 학교장재량휴업일 / 방학: 방학 기간과 학기 밖의 날";
+      p.append(f);
+      if(semDirty||semSaved){ const t=document.createElement("small"); t.textContent=semDirty?" (저장 전)":" · 저장했습니다"; p.append(t); }
+    }
     if(semSaved&&!semDirty) p.classList.add("ok");
     renderSemWarn();
     renderVac();
